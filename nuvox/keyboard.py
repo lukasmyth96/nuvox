@@ -13,6 +13,7 @@ class Keyboard:
 
         self.keys = []
         self.char_to_key = {}
+        self.key_id_to_contents = {}
 
     def build_keyboard(self, key_list):
         """
@@ -60,7 +61,7 @@ class Keyboard:
         self._check_for_invalid_coords(key)
 
         self.keys.append(key)
-
+        self.key_id_to_contents[key.key_id] = key.contents
         for char in key.contents:
             self.char_to_key.update({char: key.key_id})
 
