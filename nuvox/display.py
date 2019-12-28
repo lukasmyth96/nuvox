@@ -27,6 +27,7 @@ class Display:
         self.gui.configure(background="light green")
         self.gui.title("nuvox keyboard")
         self.gui.geometry("{}x{}".format(self.display_width, self.display_height))
+        self.gui.bind('<Motion>', self.record_mouse_position)
 
         self.display_text = ""
         self.display_variable = StringVar()
@@ -35,6 +36,7 @@ class Display:
         self.key_list = []
 
         self.build_display()
+        # self.mouse_trail = MouseTrail(self.gui)
 
     def build_display(self):
         """ Build gui from information in keyboard object"""
@@ -85,6 +87,32 @@ class Display:
 
     def exit(self):
         self.gui.destroy()
+
+    def record_mouse_position(self, event):
+        x, y = event.x, event.y  # get absolute coords relative to window
+        relx = x / self.gui.winfo_width()
+        rely = y / self.gui.winfo_height()
+        print('{}, {}'.format(relx, rely))
+        # self.mouse_trail.move_trail(x, y)
+
+
+class MouseTrail:
+    def __init__(self, gui):
+        self.x1 = 0
+        self.y1 = 0
+        self.x2 = 50
+        self.y2 = 50
+        self.canvas = Canvas(gui, width=900, height=1200)
+        self.canvas.pack()
+        self.trail = self.canvas.create_oval(self.x1, self.y1, self.x2, self.y2, fill="red")
+
+    def move_trail(self, x1, y1):
+        deltax = x1 - self.x1
+        deltay = y1 - self.y1
+        self.canvas.move(self.trail, deltax, deltay)
+        self.canvas.update()
+        self.x1 = x1
+        self.y1 = y1
 
 
 if __name__ == "__main__":
