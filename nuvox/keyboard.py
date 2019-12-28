@@ -1,6 +1,7 @@
 import  itertools
+from pprint import pprint
 
-from nuvox.config.keyboard_config import required_key_attributes
+from nuvox.config.keyboard_config import required_key_attributes, nuvox_standard_keyboard
 from nuvox.utils.intersection_over_union import get_iou
 
 
@@ -31,6 +32,8 @@ class Keyboard:
 
             self._add_key(key_dict)
 
+        self._check_for_overlaps()  # check if any keys overlap - raise ValueError if so
+
     def _add_key(self, key_dict):
         """
         Add single key item to keyboard
@@ -54,10 +57,21 @@ class Keyboard:
                   contents=key_dict['contents'],
                   type=key_dict['type'])
 
+        self._check_for_invalid_coords(key)
+
         self.keys.append(key)
 
         for char in key.contents:
             self.char_to_key.update({char: key.key_id})
+
+    @staticmethod
+    def _check_for_invalid_coords(key):
+        """ check if key has valid coords - raises ValueError if not"""
+        if key.x1 < 0 or key.y1 < 0 or key.x2 > 1 or key.y2 > 1:
+            raise ValueError('Key: {} has invalid coordinates: \n {}'.format(key.key_id, vars(key)))
+
+        elif not 0 < key.w <=1 or not 0 < key.h <= 1:
+            raise ValueError('Key: {} has invalid width or height \n {}'.format(key.key_id, vars(key)))
 
     def _check_for_overlaps(self):
         """
@@ -65,7 +79,7 @@ class Keyboard:
         """
 
         for key_a, key_b in itertools.combinations(self.keys, 2):
-            if get_iou(key_a, key_b) > 0:
+            if get_iou(key_a, key_b) > 1e-10:  # allows some tolerance for floating point precision
                 raise ValueError('Keys: {} and {} have IoU > 0 so overlap'.format(key_a.key_id, key_b.key_id))
 
 
@@ -82,3 +96,11 @@ class Key:
         self.key_id = key_id
         self.contents = contents
         self.type = type
+
+
+if __name__ == '__main__':
+
+    """ Testing """
+    keyboard = Keyboard()
+    keyboard.build_keyboard(nuvox_standard_keyboard)
+    print('STOP HERE')

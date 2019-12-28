@@ -58,4 +58,4 @@ def compute_area(bbox):
         area of bbox
     """
     # The +1 on each area calculation accounts for pixel not begin aligned with axis
-    return (bbox['x2'] - bbox['x1'] + 1) * (bbox['y2'] - bbox['y1'])
+    return (bbox['x2'] - bbox['x1']) * (bbox['y2'] - bbox['y1'])
