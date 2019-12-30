@@ -5,7 +5,7 @@ from tkinter import *
 
 import numpy as np
 
-from nuvox.traces import get_random_trace
+from nuvox.traces import get_random_trace, get_trance_angles
 
 class Display:
 
@@ -161,7 +161,12 @@ class Display:
             list of relative (x, y) coords to plot
         """
 
-        rgb_cols = [(255, yellow, 0) for yellow in np.linspace(255, 0, len(trace), dtype=int)]
+        # rgb_cols = [(255, yellow, 0) for yellow in np.linspace(255, 0, len(trace), dtype=int)]
+        # hex_cols = [rgb_to_hex(rgb) for rgb in rgb_cols]
+
+        # TODO delete after testing
+        trace_angles = get_trance_angles(trace)
+        rgb_cols = [(255, int(255 - angle * (255 / np.math.pi)), 0) for angle in trace_angles]
         hex_cols = [rgb_to_hex(rgb) for rgb in rgb_cols]
 
         self.gui.unbind('<Motion>')  # temporarily unbind motion tracker

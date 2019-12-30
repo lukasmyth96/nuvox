@@ -45,25 +45,54 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=20
     for idx, (current_char, next_char) in enumerate(zip(char_list, char_list[1:])):
         curr_key = keyboard.char_to_key[current_char]
         next_key = keyboard.char_to_key[next_char]
-        if curr_key == next_key:
-            continue
+
+        # Get list of intermediate points - the number of which is proportional to the distance between the centroid
+
+        if idx == 0:
+            start_point = get_random_point(curr_key)
         else:
-            # Get list of intermediate points - the number of which is proportional to the distance between the centroid
+            start_point = end_point
 
-            if idx == 0:
-                start_point = get_random_point(curr_key)
-            else:
-                start_point = end_point
+        if idx > 0 and curr_key == next_key:
+            continue
 
-            end_point = get_random_point(next_key)
+        end_point = get_random_point(next_key)
 
-            dist = np.linalg.norm(np.array(start_point) - np.array(end_point))
-            num_points = np.round(dist * points_per_unit_dist)
-            intermediate_points = np.linspace(start_point, end_point, num_points)
-            intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
-            trace += intermediate_points
+        dist = np.linalg.norm(np.array(start_point) - np.array(end_point))
+        num_points = np.round(dist * points_per_unit_dist)
+        intermediate_points = np.linspace(start_point, end_point, num_points, dtype=np.float64)
+        intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
+        trace += intermediate_points
+
+    trace = [trace[idx] for idx in range(len(trace) - 1) if trace[idx] != trace[idx+1]]  # filter out adjacent duplicates
 
     return trace
+
+
+def get_trance_angles(trace):
+    """
+    get list of angles (radians) at every point in a trace, that is, the angle made between the inbound and outbound vectors at
+    every point in the trace.
+    Parameters
+    ----------
+    trace: list[tuple]
+        list of (x,y) tuples
+
+    Returns
+    -------
+    angles: list[float]
+    """
+    angles=[]
+    for idx in range(1, len(trace) - 1):
+        vector_in = np.array(trace[idx]) - np.array(trace[idx - 1], dtype=np.float64)
+        vector_out = np.array(trace[idx + 1]) - np.array(trace[idx])
+        angle = angle_between(vector_in, vector_out)
+        angles.append(angle)
+    angles.append(0)
+    angles.insert(0, 0)
+    assert len(angles) == len(trace)
+
+    return angles
 
 
 def get_random_point(key, distribution='trunc_normal'):
@@ -95,3 +124,19 @@ def trunc_normal(mean, stddev, lower, upper):
         if lower < num < upper:
             break
     return num
+
+
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    eps = 1e-10
+    angle = np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0 + eps, 1.0 - eps))
+    return angle
