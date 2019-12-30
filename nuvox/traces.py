@@ -82,6 +82,21 @@ def get_trance_angles(trace):
     -------
     angles: list[float]
     """
+
+    def unit_vector(vector):
+        """ Returns the unit vector of the vector.  """
+        return vector / np.linalg.norm(vector)
+
+    def angle_between(v1, v2):
+        """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+        """
+        v1_u = unit_vector(v1)
+        v2_u = unit_vector(v2)
+        eps = 1e-10
+        angle = np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0 + eps, 1.0 - eps))
+        return angle
+
     angles=[]
     for idx in range(1, len(trace) - 1):
         vector_in = np.array(trace[idx]) - np.array(trace[idx - 1], dtype=np.float64)
@@ -93,6 +108,35 @@ def get_trance_angles(trace):
     assert len(angles) == len(trace)
 
     return angles
+
+
+def get_trace_first_derivatives(trace):
+
+    """
+    get list of first derivatives dy/dx at every point in a trace, that is, the mean of the gradients of the inbound
+    and outboud vectors at a given point
+    Parameters
+    ----------
+    trace: list[tuple]
+        list of (x,y) tuples
+
+    Returns
+    -------
+    derivatives: list[float]
+    """
+
+    derivatives = []
+    for idx in range(1, len(trace) - 1):
+        grad_inbound = np.array((trace[idx][1] - trace[idx-1][1]) / (trace[idx][0] - trace[idx-1][0]))
+        grad_outbound = np.array((trace[idx+1][1] - trace[idx][1]) / (trace[idx+1][0] - trace[idx][0]))
+
+        derivatives.append(np.mean([grad_inbound, grad_outbound]))
+
+    derivatives.append(0)
+    derivatives.insert(0, 0)
+    assert len(derivatives) == len(trace)
+
+    return derivatives
 
 
 def get_random_point(key, distribution='trunc_normal'):
@@ -126,17 +170,4 @@ def trunc_normal(mean, stddev, lower, upper):
     return num
 
 
-def unit_vector(vector):
-    """ Returns the unit vector of the vector.  """
-    return vector / np.linalg.norm(vector)
 
-
-def angle_between(v1, v2):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'::
-
-    """
-    v1_u = unit_vector(v1)
-    v2_u = unit_vector(v2)
-    eps = 1e-10
-    angle = np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0 + eps, 1.0 - eps))
-    return angle
