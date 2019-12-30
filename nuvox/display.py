@@ -1,9 +1,9 @@
-
+from collections import deque
 import random
 import time
 from tkinter import *
 
-import pyautogui
+import numpy as np
 
 
 class Display:
@@ -39,7 +39,8 @@ class Display:
         # dict mapping key_id to TK object
         self.key_list = []
 
-        self.pointer = None
+        self.trace_buffer = deque(maxlen=200)  # store coordinates of mouse in buffer of fixed length
+        self.trace_labels = []  # store label objects for trace
         self.build_display()
 
     def build_display(self):
@@ -51,13 +52,17 @@ class Display:
                 callback = lambda id: lambda: self.press_key(id)
                 obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=callback(key.key_id), font=("Calibri 18"))
 
+            elif key.type == 'enter_button':
+                text = ' '.join(key.contents).upper()
+                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.plot_trace(), font=("Calibri 10"))
+
             elif key.type == 'clear_button':
                 text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.clear_display(), font=("Calibri 14"))
+                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.clear_display(), font=("Calibri 10"))
 
             elif key.type == 'exit_button':
                 text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.exit(), font=("Calibri 14"))
+                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.exit(), font=("Calibri 10"))
 
             elif key.type == 'display':
                 obj = Entry(self.gui, textvariable=self.display_variable, font=("Calibri 18"))
@@ -67,9 +72,6 @@ class Display:
 
             obj.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
             self.key_list.append(obj)
-
-        self.pointer = Label(self.gui, text='', bg='red', font=("Calibri 18"))
-        self.pointer.place(relx=0.5, rely=0.5, relwidth=0.05, relheight=0.05)
 
     def start_display(self):
         """ Start display"""
@@ -92,6 +94,11 @@ class Display:
         self.display_text = ""
         self.display_variable.set("")
 
+        # destroy all labels and clear trace buffer
+        for label in self.trace_labels:
+            label.destroy()
+        self.trace_buffer.clear()
+
     def exit(self):
         self.gui.destroy()
 
@@ -100,13 +107,37 @@ class Display:
         relx = (self.gui.winfo_pointerx() - self.gui.winfo_x()) / self.gui.winfo_width()
         rely = (self.gui.winfo_pointery() - self.gui.winfo_y()) / self.gui.winfo_height()
 
-        print('{:.2f}, {:.2f}'.format(relx, rely))
-        print('\n\n')
-        self.move_pointer(relx, rely)
+        # append coordinate to buffer only if euclidean distance exceeds minimum delta
 
-    def move_pointer(self, x, y):
-        """move mouse pointer to position x, y"""
-        self.pointer.place(relx=x, rely=y)
+        if not self.trace_buffer:
+            self.trace_buffer.appendleft((relx, rely))
+        else:
+            prev_coords = self.trace_buffer[0]
+            euclidean_dist = np.linalg.norm(np.array((relx, rely) - np.array((prev_coords))))
+            if euclidean_dist > 0.05 or not self.trace_buffer:
+                self.trace_buffer.appendleft((relx, rely))
+                print('x={:.2f}, y={:.2f}'.format(relx, rely))
+
+    def plot_trace(self):
+        """ plot trace of last 100 mouse positions"""
+
+        rgb_cols = [(255, yellow, 0) for yellow in np.linspace(255, 0, len(self.trace_buffer), dtype=int)]
+        hex_cols = [rgb_to_hex(rgb) for rgb in rgb_cols]
+
+        self.gui.unbind('<Motion>')  # temporarily unbind motion tracker
+        for idx, (x, y) in enumerate(reversed(self.trace_buffer)):
+            obj = Label(self.gui, text='', bg=hex_cols[idx])
+            obj.place(relx=x, rely=y, relwidth=0.01, relheight=0.01)
+            self.trace_labels.append(obj)
+            self.gui.update()
+            time.sleep(0.05)
+        self.gui.bind('<Motion>', self.record_mouse_position)  # re-bind motion tracking after complete
+
+
+def rgb_to_hex(rgb):
+    """translates an rgb tuple of int to a tkinter friendly color code
+    """
+    return "#%02x%02x%02x" % rgb
 
 
 if __name__ == "__main__":
