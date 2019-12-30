@@ -5,6 +5,7 @@ from tkinter import *
 
 import numpy as np
 
+from nuvox.traces import get_perfect_trace
 
 class Display:
 
@@ -104,7 +105,7 @@ class Display:
             mouse_trace.reverse()  # reverse because newest added to left
             self.plot_trace(trace=mouse_trace)
         else:
-            perfect_trace = self.keyboard.get_perfect_trace(current_display_text)
+            perfect_trace = get_perfect_trace(self.keyboard, current_display_text)
             obj = Label(self.gui, text='plotting perfect trace for: \'{}\''.format(current_display_text), bg='gray70')
             obj.place(relx=0, rely=0, relwidth=2/3, relheight=0.2)
             self.plot_trace(perfect_trace)
