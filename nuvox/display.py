@@ -1,6 +1,9 @@
 
 import random
+import time
 from tkinter import *
+
+import pyautogui
 
 
 class Display:
@@ -27,6 +30,7 @@ class Display:
         self.gui.configure(background="light green")
         self.gui.title("nuvox keyboard")
         self.gui.geometry("{}x{}".format(self.display_width, self.display_height))
+        self.gui.resizable(width=False, height=False)
         self.gui.bind('<Motion>', self.record_mouse_position)
 
         self.display_text = ""
@@ -35,8 +39,8 @@ class Display:
         # dict mapping key_id to TK object
         self.key_list = []
 
+        self.pointer = None
         self.build_display()
-        # self.mouse_trail = MouseTrail(self.gui)
 
     def build_display(self):
         """ Build gui from information in keyboard object"""
@@ -64,6 +68,9 @@ class Display:
             obj.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
             self.key_list.append(obj)
 
+        self.pointer = Label(self.gui, text='', bg='red', font=("Calibri 18"))
+        self.pointer.place(relx=0.5, rely=0.5, relwidth=0.05, relheight=0.05)
+
     def start_display(self):
         """ Start display"""
         self.gui.mainloop()
@@ -89,30 +96,17 @@ class Display:
         self.gui.destroy()
 
     def record_mouse_position(self, event):
-        x, y = event.x, event.y  # get absolute coords relative to window
-        relx = x / self.gui.winfo_width()
-        rely = y / self.gui.winfo_height()
-        print('{}, {}'.format(relx, rely))
-        # self.mouse_trail.move_trail(x, y)
 
+        relx = (self.gui.winfo_pointerx() - self.gui.winfo_x()) / self.gui.winfo_width()
+        rely = (self.gui.winfo_pointery() - self.gui.winfo_y()) / self.gui.winfo_height()
 
-class MouseTrail:
-    def __init__(self, gui):
-        self.x1 = 0
-        self.y1 = 0
-        self.x2 = 50
-        self.y2 = 50
-        self.canvas = Canvas(gui, width=900, height=1200)
-        self.canvas.pack()
-        self.trail = self.canvas.create_oval(self.x1, self.y1, self.x2, self.y2, fill="red")
+        print('{:.2f}, {:.2f}'.format(relx, rely))
+        print('\n\n')
+        self.move_pointer(relx, rely)
 
-    def move_trail(self, x1, y1):
-        deltax = x1 - self.x1
-        deltay = y1 - self.y1
-        self.canvas.move(self.trail, deltax, deltay)
-        self.canvas.update()
-        self.x1 = x1
-        self.y1 = y1
+    def move_pointer(self, x, y):
+        """move mouse pointer to position x, y"""
+        self.pointer.place(relx=x, rely=y)
 
 
 if __name__ == "__main__":
