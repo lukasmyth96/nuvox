@@ -39,7 +39,7 @@ class Display:
         # dict mapping key_id to TK object
         self.key_list = []
 
-        self.trace_buffer = deque(maxlen=200)  # store coordinates of mouse in buffer of fixed length
+        self.mouse_trace_buffer = deque(maxlen=200)  # store coordinates of mouse in buffer of fixed length
         self.trace_labels = []  # store label objects for trace
         self.build_display()
 
@@ -54,7 +54,7 @@ class Display:
 
             elif key.type == 'enter_button':
                 text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.plot_trace(), font=("Calibri 10"))
+                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.press_enter(), font=("Calibri 10"))
 
             elif key.type == 'clear_button':
                 text = ' '.join(key.contents).upper()
@@ -89,7 +89,28 @@ class Display:
 
         self.display_variable.set(self.display_text)
 
-    # of text entry box
+    def press_enter(self):
+        """ called when enter key is pressed.
+
+        If there is text in the display then this will playback a perfect trace for the text entered otherwise the
+        most recent mouse activity will be played back as a trace.
+        """
+
+        current_display_text = self.display_variable.get()
+        if current_display_text == "":
+            obj = Label(self.gui, text='plotting recent mouse activity', bg='gray70')
+            obj.place(relx=0, rely=0, relwidth=2/3, relheight=0.2)
+            mouse_trace = self.mouse_trace_buffer.copy()
+            mouse_trace.reverse()  # reverse because newest added to left
+            self.plot_trace(trace=mouse_trace)
+        else:
+            perfect_trace = self.keyboard.get_perfect_trace(current_display_text)
+            obj = Label(self.gui, text='plotting perfect trace for: \'{}\''.format(current_display_text), bg='gray70')
+            obj.place(relx=0, rely=0, relwidth=2/3, relheight=0.2)
+            self.plot_trace(perfect_trace)
+
+        self.trace_labels.append(obj)
+
     def clear_display(self):
         self.display_text = ""
         self.display_variable.set("")
@@ -97,7 +118,7 @@ class Display:
         # destroy all labels and clear trace buffer
         for label in self.trace_labels:
             label.destroy()
-        self.trace_buffer.clear()
+        self.mouse_trace_buffer.clear()
 
     def exit(self):
         self.gui.destroy()
@@ -109,23 +130,28 @@ class Display:
 
         # append coordinate to buffer only if euclidean distance exceeds minimum delta
 
-        if not self.trace_buffer:
-            self.trace_buffer.appendleft((relx, rely))
+        if not self.mouse_trace_buffer:
+            self.mouse_trace_buffer.appendleft((relx, rely))
         else:
-            prev_coords = self.trace_buffer[0]
+            prev_coords = self.mouse_trace_buffer[0]
             euclidean_dist = np.linalg.norm(np.array((relx, rely) - np.array((prev_coords))))
-            if euclidean_dist > 0.05 or not self.trace_buffer:
-                self.trace_buffer.appendleft((relx, rely))
+            if euclidean_dist > 0.05 or not self.mouse_trace_buffer:
+                self.mouse_trace_buffer.appendleft((relx, rely))
                 print('x={:.2f}, y={:.2f}'.format(relx, rely))
 
-    def plot_trace(self):
-        """ plot trace of last 100 mouse positions"""
+    def plot_trace(self, trace):
+        """ plot trace
+        Parameters
+        ----------
+        trace: list(tuple)
+            list of relative (x, y) coords to plot
+        """
 
-        rgb_cols = [(255, yellow, 0) for yellow in np.linspace(255, 0, len(self.trace_buffer), dtype=int)]
+        rgb_cols = [(255, yellow, 0) for yellow in np.linspace(255, 0, len(trace), dtype=int)]
         hex_cols = [rgb_to_hex(rgb) for rgb in rgb_cols]
 
         self.gui.unbind('<Motion>')  # temporarily unbind motion tracker
-        for idx, (x, y) in enumerate(reversed(self.trace_buffer)):
+        for idx, (x, y) in enumerate(trace):
             obj = Label(self.gui, text='', bg=hex_cols[idx])
             obj.place(relx=x, rely=y, relwidth=0.01, relheight=0.01)
             self.trace_labels.append(obj)
