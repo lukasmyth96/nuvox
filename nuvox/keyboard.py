@@ -5,7 +5,7 @@ import numpy as np
 
 from nuvox.config.keyboard_config import required_key_attributes, nuvox_standard_keyboard
 from nuvox.utils.intersection_over_union import get_iou
-from nuvox.traces import get_perfect_trace
+from nuvox.traces import get_random_trace
 
 
 class Keyboard:
@@ -108,5 +108,5 @@ if __name__ == '__main__':
     """ Testing """
     keyboard = Keyboard()
     keyboard.build_keyboard(nuvox_standard_keyboard)
-    trace = get_perfect_trace(keyboard, 'hello my name is luka')
+    trace = get_random_trace(keyboard, 'hello my name is luka')
     print('STOP HERE')

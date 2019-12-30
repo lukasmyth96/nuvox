@@ -5,7 +5,7 @@ from tkinter import *
 
 import numpy as np
 
-from nuvox.traces import get_perfect_trace
+from nuvox.traces import get_random_trace
 
 class Display:
 
@@ -32,7 +32,11 @@ class Display:
         self.gui.title("nuvox keyboard")
         self.gui.geometry("{}x{}".format(self.display_width, self.display_height))
         self.gui.resizable(width=False, height=False)
+
+        self.left_mouse_down = False
         self.gui.bind('<Motion>', self.record_mouse_position)
+        self.gui.bind('<Button-1>', self.b1_down)
+        self.gui.bind('<ButtonRelease-1>', self.release_b1)
 
         self.display_text = ""
         self.display_variable = StringVar()
@@ -105,7 +109,7 @@ class Display:
             mouse_trace.reverse()  # reverse because newest added to left
             self.plot_trace(trace=mouse_trace)
         else:
-            perfect_trace = get_perfect_trace(self.keyboard, current_display_text)
+            perfect_trace = get_random_trace(self.keyboard, current_display_text)
             obj = Label(self.gui, text='plotting perfect trace for: \'{}\''.format(current_display_text), bg='gray70')
             obj.place(relx=0, rely=0, relwidth=2/3, relheight=0.2)
             self.plot_trace(perfect_trace)
@@ -124,21 +128,30 @@ class Display:
     def exit(self):
         self.gui.destroy()
 
+    def b1_down(self, event):
+        """press down left mouse button"""
+        self.left_mouse_down = True
+
+    def release_b1(self, event):
+        """ release left click"""
+        self.left_mouse_down = False
+
     def record_mouse_position(self, event):
+        """record mouse movement when left mouse button is held down"""
+        if self.left_mouse_down:
+            relx = (self.gui.winfo_pointerx() - self.gui.winfo_x()) / self.gui.winfo_width()
+            rely = (self.gui.winfo_pointery() - self.gui.winfo_y()) / self.gui.winfo_height()
 
-        relx = (self.gui.winfo_pointerx() - self.gui.winfo_x()) / self.gui.winfo_width()
-        rely = (self.gui.winfo_pointery() - self.gui.winfo_y()) / self.gui.winfo_height()
+            # append coordinate to buffer only if euclidean distance exceeds minimum delta
 
-        # append coordinate to buffer only if euclidean distance exceeds minimum delta
-
-        if not self.mouse_trace_buffer:
-            self.mouse_trace_buffer.appendleft((relx, rely))
-        else:
-            prev_coords = self.mouse_trace_buffer[0]
-            euclidean_dist = np.linalg.norm(np.array((relx, rely) - np.array((prev_coords))))
-            if euclidean_dist > 0.05 or not self.mouse_trace_buffer:
+            if not self.mouse_trace_buffer:
                 self.mouse_trace_buffer.appendleft((relx, rely))
-                print('x={:.2f}, y={:.2f}'.format(relx, rely))
+            else:
+                prev_coords = self.mouse_trace_buffer[0]
+                euclidean_dist = np.linalg.norm(np.array((relx, rely) - np.array((prev_coords))))
+                if euclidean_dist > 0.05 or not self.mouse_trace_buffer:
+                    self.mouse_trace_buffer.appendleft((relx, rely))
+                    print('x={:.2f}, y={:.2f}'.format(relx, rely))
 
     def plot_trace(self, trace):
         """ plot trace

@@ -2,7 +2,8 @@ import numpy as np
 
 import nuvox
 
-def get_perfect_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=20):
+
+def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=20):
     """
     Get a trace (list of (x, y) tuples) for the perfect path for a given string of text, that is, the path that
     traverses from centroid to centroid in a straight line.
@@ -41,17 +42,56 @@ def get_perfect_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=2
 
     trace = []
 
-    for current_char, next_char in zip(char_list, char_list[1:]):
-        current_key = keyboard.char_to_key[current_char]
+    for idx, (current_char, next_char) in enumerate(zip(char_list, char_list[1:])):
+        curr_key = keyboard.char_to_key[current_char]
         next_key = keyboard.char_to_key[next_char]
-        if current_key == next_key:
+        if curr_key == next_key:
             continue
         else:
             # Get list of intermediate points - the number of which is proportional to the distance between the centroid
-            dist = np.linalg.norm(np.array(current_key.centroid) - np.array(next_key.centroid))
+
+            if idx == 0:
+                start_point = get_random_point(curr_key)
+            else:
+                start_point = end_point
+
+            end_point = get_random_point(next_key)
+
+            dist = np.linalg.norm(np.array(start_point) - np.array(end_point))
             num_points = np.round(dist * points_per_unit_dist)
-            intermediate_points = np.linspace(current_key.centroid, next_key.centroid, num_points)
+            intermediate_points = np.linspace(start_point, end_point, num_points)
             intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
             trace += intermediate_points
 
     return trace
+
+
+def get_random_point(key, distribution='trunc_normal'):
+    """
+    get a random point from within the keys border
+    Parameters
+    ----------
+    key: nuvox.keyboard.Key
+    distribution: str
+
+    Returns
+    -------
+    (x, y): tuple
+        x, y coord of random point
+    """
+
+    if distribution == 'trunc_normal':
+        x = trunc_normal(mean=key.centroid[0], stddev=key.w / 4, lower=key.x1, upper=key.x2)
+        y = trunc_normal(mean=key.centroid[1], stddev=key.h / 4, lower=key.y1, upper=key.y2)
+        return (x, y)
+
+    else:
+        raise ValueError('Parameter: distribution value {} not handled yet'.format(distribution))
+
+
+def trunc_normal(mean, stddev, lower, upper):
+    while True:
+        num = np.random.normal(mean, stddev)
+        if lower < num < upper:
+            break
+    return num
