@@ -106,15 +106,17 @@ class Keyboard:
         if not isinstance(text, str):
             raise ValueError('Parameter: text must be a string')
 
-        elif not all([char in list(self.char_to_key) for char in text]):
-            invalid_chars = list(set(list(text)) - set(list(self.char_to_key)))
-            raise ValueError('text contains following character not included in keybaord: {}'.format(invalid_chars))
-
-        trace = []
+        text = text.lower()
         char_list = list(text)
+
+        if not all([char in list(self.char_to_key) for char in text]):
+            invalid_chars = list(set(char_list) - set(list(self.char_to_key)))
+            raise ValueError('text contains following character not included in keybaord: {}'.format(invalid_chars))
 
         if skip_spacekey:
             char_list = [char for char in char_list if char != ' ']
+
+        trace = []
 
         for current_char, next_char in zip(char_list, char_list[1:]):
             current_key = self.char_to_key[current_char]
