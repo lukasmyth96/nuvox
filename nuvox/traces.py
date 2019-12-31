@@ -3,7 +3,7 @@ import numpy as np
 import nuvox
 
 
-def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=20):
+def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(15, 25)):
     """
     Get a trace (list of (x, y) tuples) for the perfect path for a given string of text, that is, the path that
     traverses from centroid to centroid in a straight line.
@@ -15,8 +15,9 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=20
         text to trace
     skip_spacekey: bool, optional
         whether to skip the space key between each word in trace
-    points_per_unit_dist: int
-        number of intermediate points to generate for every unit distance covered
+    points_per_unit_dist: tuple
+        range for number of intermediate points to generate for every unit distance covered - value gets randomly
+        selected from range each time
 
     Returns
     -------
@@ -59,7 +60,8 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=20
         end_point = get_random_point(next_key)
 
         dist = np.linalg.norm(np.array(start_point) - np.array(end_point))
-        num_points = np.math.ceil(dist * points_per_unit_dist)
+        points_per_unit = int(np.random.uniform(points_per_unit_dist[0], points_per_unit_dist[1]))
+        num_points = np.math.ceil(dist * points_per_unit)
         intermediate_points = np.linspace(start_point, end_point, num_points)
         intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
         trace += intermediate_points

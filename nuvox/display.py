@@ -7,6 +7,7 @@ import numpy as np
 
 from nuvox.traces import get_random_trace, get_trance_angles
 
+
 class Display:
 
     def __init__(self, keyboard, display_width, display_height):
