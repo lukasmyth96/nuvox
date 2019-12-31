@@ -59,8 +59,8 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=20
         end_point = get_random_point(next_key)
 
         dist = np.linalg.norm(np.array(start_point) - np.array(end_point))
-        num_points = np.round(dist * points_per_unit_dist)
-        intermediate_points = np.linspace(start_point, end_point, num_points, dtype=np.float64)
+        num_points = np.math.ceil(dist * points_per_unit_dist)
+        intermediate_points = np.linspace(start_point, end_point, num_points)
         intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
         trace += intermediate_points
 
@@ -99,7 +99,7 @@ def get_trance_angles(trace):
 
     angles=[]
     for idx in range(1, len(trace) - 1):
-        vector_in = np.array(trace[idx]) - np.array(trace[idx - 1], dtype=np.float64)
+        vector_in = np.array(trace[idx]) - np.array(trace[idx - 1])
         vector_out = np.array(trace[idx + 1]) - np.array(trace[idx])
         angle = angle_between(vector_in, vector_out)
         angles.append(angle)
