@@ -3,12 +3,12 @@
 class ModelConfig:
 
     # Training settings
-    EPOCHS = 1000
-    EVAL_EPOCHS = 10
+    EPOCHS = 10
+    EVAL_EPOCHS = 50
     BATCH_SIZE = 32
     SHUFFLE = True
     OPTIMIZER = 'adam'
-    MAX_SEQ_LEN = 100
+    MAX_SEQ_LEN = 200
 
     # Callbacks
     METRIC_TO_MONITOR = 'accuracy'

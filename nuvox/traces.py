@@ -68,7 +68,8 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(1
 
     trace = [trace[idx] for idx in range(len(trace) - 1) if trace[idx] != trace[idx+1]]  # filter out adjacent duplicates
 
-    assert len(trace) > 0, 'Error returning empty trace'
+    if not trace:
+        return get_random_trace(keyboard, text, skip_spacekey, points_per_unit_dist)  # try again
 
     return trace
 

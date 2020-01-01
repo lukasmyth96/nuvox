@@ -6,17 +6,18 @@ import random
 
 import numpy as np
 
-from nuvox.traces import get_random_trace
-
 from keras.layers import Input, LSTM, TimeDistributed, Dense
 from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 
+from nuvox.traces import get_random_trace
+from nuvox.utils.common import pickle_save, pickle_load
+
 
 class NuvoxModel:
 
-    def __init__(self, config, keyboard):
+    def __init__(self, config=None, keyboard=None):
 
         """
 
@@ -69,6 +70,8 @@ class NuvoxModel:
 
         self.set_log_dir()  # set and create log dir
 
+        self.save_model()
+
         batch_gen = self.batch_generator(dataset)
 
         steps_per_epoch = np.math.ceil(dataset.num_examples / self.config.BATCH_SIZE)
@@ -83,7 +86,7 @@ class NuvoxModel:
                                        steps_per_epoch=steps_per_epoch,
                                        epochs=self.config.EPOCHS,
                                        callbacks=callbacks,
-                                       verbose=0)
+                                       verbose=1)
 
     def predict(self, batch):
 
@@ -106,12 +109,19 @@ class NuvoxModel:
         """
 
         # Save model config
-        filehandler = open(os.path.join(self.config.LOG_DIR, 'model_config.pkl'), 'wb')
-        pickle.dump(self.config, filehandler)
+        pickle_save(os.path.join(self.config.LOG_DIR, 'model_config.pkl'), self.config)
+        pickle_save(os.path.join(self.config.LOG_DIR, 'keyboard.pkl'), self.keyboard)
 
-        self.keras_model.save(os.path.join(self.config.LOG_DIR, 'model.h5'))
+        self.keras_model.save(self.config.CHECKPOINT_PATH)
 
         print('Model weights and config saved in : {}'.format(self.config.LOG_DIR))
+
+    def load_model(self, model_dir):
+
+        self.config = pickle_load(os.path.join(model_dir, 'model_config.pkl'))
+        self.keyboard = pickle_load(os.path.join(model_dir, 'keyboard.pkl'))
+
+        self.keras_model = load_model(self.config.CHECKPOINT_PATH)
 
     def set_log_dir(self):
 
@@ -170,6 +180,14 @@ class NuvoxModel:
             iteration += 1
 
 
+if __name__ == '__main__':
+
+    model = NuvoxModel()
+    model.load_model('../models/01_01_2020_19_01_17')
+
+    trace = np.array(get_random_trace(model.keyboard, 'the'))
+    pred = model.predict(trace)
+    print('stop here')
 
 
 
