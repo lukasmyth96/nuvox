@@ -6,35 +6,30 @@ import random
 
 import numpy as np
 
-from nuvox.config.keyboard_config import nuvox_standard_keyboard
-from nuvox.keyboard import Keyboard
 from nuvox.traces import get_random_trace
-from nuvox.dataset import Dataset
 
 from keras.layers import Input, LSTM, TimeDistributed, Dense
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.utils import to_categorical
-from keras.callbacks import TensorBoard
-
-
-class Config:
-
-    EPOCHS = 100
-    BATCH_SIZE = 16
-    SHUFFLE = True
-    OPTIMIZER = 'adam'
-    MAX_SEQ_LEN = 100
-    OUTPUT_DIR = '../models'
+from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 
 
 class NuvoxModel:
 
-    def __init__(self, config):
+    def __init__(self, config, keyboard):
 
+        """
+
+        Parameters
+        ----------
+        config: nuvox.config.model_config.ModelConfig
+        keyboard: nuvox.keyboard.Keyboard
+        """
+
+        self.is_vocabulary_set = False
         self.config = config
 
-        self.keyboard = Keyboard()
-        self.keyboard.build_keyboard(nuvox_standard_keyboard)
+        self.keyboard = keyboard
 
         self.keras_model = None
 
@@ -49,6 +44,8 @@ class NuvoxModel:
         self.config.VOCAB = dataset.vocab
         self.config.VOCAB_SIZE = dataset.vocab_size
         self.config.WORD_TO_IDX = dataset.word_to_idx
+
+        self.is_vocabulary_set = True
 
     def build_keras_model(self):
         model = Sequential()
@@ -65,20 +62,28 @@ class NuvoxModel:
         dataset:
         """
 
-        self.set_log_dir()
+        # If vocabulary of model has not already been set then do this now and build keras model
+        if not self.is_vocabulary_set:
+            self.set_vocabulary(dataset)
+            self.build_keras_model()
 
-        batch_gen = batch_generator(dataset, self.keyboard, batch_size=self.config.BATCH_SIZE,
-                                    max_seq_len=self.config.MAX_SEQ_LEN,
-                                    shuffle=self.config.SHUFFLE)
+        self.set_log_dir()  # set and create log dir
+
+        batch_gen = self.batch_generator(dataset)
 
         steps_per_epoch = np.math.ceil(dataset.num_examples / self.config.BATCH_SIZE)
         
-        callbacks = [TensorBoard(log_dir=self.config.LOG_DIR)]
+        callbacks = [TensorBoard(log_dir=self.config.LOG_DIR),
+                     ModelCheckpoint(filepath=self.config.CHECKPOINT_PATH,
+                                     monitor=self.config.METRIC_TO_MONITOR,
+                                     save_best_only=True,
+                                     save_weights_only=False)]
 
         self.keras_model.fit_generator(batch_gen,
                                        steps_per_epoch=steps_per_epoch,
                                        epochs=self.config.EPOCHS,
-                                       callbacks=callbacks)
+                                       callbacks=callbacks,
+                                       verbose=0)
 
     def predict(self, batch):
 
@@ -86,11 +91,10 @@ class NuvoxModel:
 
         return pred
 
-    def evaluate(self, dataset, batch_size=10):
+    def evaluate(self, dataset):
 
-        steps = 10 * np.math.ceil(dataset.num_examples / batch_size)
-        batch_gen = batch_generator(dataset, self.keyboard, batch_size=batch_size,
-                                    max_seq_len=self.config.MAX_SEQ_LEN)
+        steps = self.config.EVAL_EPOCHS * np.math.ceil(dataset.num_examples / self.config.BATCH_SIZE)
+        batch_gen = self.batch_generator(dataset)
 
         loss, acc = self.keras_model.evaluate_generator(batch_gen, steps=steps)
         print('Evaluation: Loss {:.2f}  Accuracy: {:.1%}%'.format(loss, acc))
@@ -118,73 +122,54 @@ class NuvoxModel:
         self.config.LOG_DIR = os.path.join(self.config.OUTPUT_DIR, timestamp)
         os.mkdir(self.config.LOG_DIR)
 
+        self.config.CHECKPOINT_PATH = os.path.join(self.config.LOG_DIR, 'best_{}.h5'.format(self.config.METRIC_TO_MONITOR))
 
-def batch_generator(dataset, keyboard, batch_size, max_seq_len, shuffle=True):
-    """
-    generate batches for training
-    Parameters
-    ----------
-    dataset: nuvox.dataset.Dataset
-    keyboard: nuvox.keyboard.Keyboard
-    batch_size: int
-    max_seq_len: int
-    shuffle: bool
+    def batch_generator(self, dataset):
+        """
+        generate batches for training
+        Parameters
+        ----------
+        dataset: nuvox.dataset.Dataset
 
-    Yields
-    -------
-    batch: np.ndarray
-    labels: np.ndarray
-    """
-    iteration = 0
-    num_examples = len(dataset.word_seq)
+        Yields
+        -------
+        batch: np.ndarray
+        labels: np.ndarray
+        """
+        iteration = 0
+        num_examples = self.config.VOCAB_SIZE
+        batch_size = self.config.BATCH_SIZE
+        max_seq_len = self.config.MAX_SEQ_LEN
+        shuffle = self.config.SHUFFLE
 
-    batch = np.zeros(shape=(batch_size, max_seq_len, 2))  # (x, y) only for now
-    labels = np.zeros(shape=(batch_size, dataset.vocab_size))
+        batch = np.zeros(shape=(batch_size, max_seq_len, 2))  # (x, y) only for now
+        labels = np.zeros(shape=(batch_size, dataset.vocab_size))
 
-    while True:
+        while True:
 
-        if iteration % num_examples == 0 and shuffle:
-            random.shuffle(dataset.word_seq)
+            if iteration % num_examples == 0 and shuffle:
+                random.shuffle(dataset.word_seq)
 
-        word = dataset.word_seq[iteration % num_examples]
-        trace = np.array(get_random_trace(keyboard, word))  # [seq_len, 2]
-        label = to_categorical(dataset.word_to_idx[word], num_classes=dataset.vocab_size)  # one-hot
+            word = dataset.word_seq[iteration % num_examples]
+            trace = np.array(get_random_trace(self.keyboard, word))  # [seq_len, 2]
+            label = to_categorical(dataset.word_to_idx[word], num_classes=dataset.vocab_size)  # one-hot
 
-        if len(trace) > max_seq_len:
-            raise Exception('trace exceeds maximum length: '.format(max_seq_len))
+            if len(trace) > max_seq_len:
+                raise Exception('trace exceeds maximum length: '.format(max_seq_len))
 
-        batch[iteration % batch_size, max_seq_len - trace.shape[0]:, :] = trace
-        labels[iteration % batch_size] = label
+            batch[iteration % batch_size, max_seq_len - trace.shape[0]:, :] = trace
+            labels[iteration % batch_size] = label
 
-        if iteration % batch_size == batch_size -1:
+            if iteration % batch_size == batch_size -1:
 
-            yield batch, labels
+                yield batch, labels
 
-            batch = np.zeros(shape=(batch_size, max_seq_len, 2))  # (x, y) only for now
-            labels = np.zeros(shape=(batch_size, dataset.vocab_size))
+                batch = np.zeros(shape=(batch_size, max_seq_len, 2))  # (x, y) only for now
+                labels = np.zeros(shape=(batch_size, dataset.vocab_size))
 
-        iteration += 1
+            iteration += 1
 
 
-if __name__ == '__main__':
 
-    """ Training"""
-
-    keyboard = Keyboard()
-    keyboard.build_keyboard(nuvox_standard_keyboard)
-
-    text = 'hello what is your name?'
-    dataset = Dataset()
-    dataset.fit_on_text(text)
-
-    config = Config()
-    model = NuvoxModel(config)
-    model.set_vocabulary(dataset)
-    model.build_keras_model()
-    model.train(dataset)
-    loss, acc = model.evaluate(dataset)
-    model.save_model()
-
-    print('Stop here')
 
 

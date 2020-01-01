@@ -1,4 +1,4 @@
-import  itertools
+import itertools
 from pprint import pprint
 
 import numpy as np

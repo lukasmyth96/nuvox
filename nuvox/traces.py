@@ -60,13 +60,15 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(1
         end_point = get_random_point(next_key)
 
         dist = np.linalg.norm(np.array(start_point) - np.array(end_point))
-        points_per_unit = int(np.random.uniform(points_per_unit_dist[0], points_per_unit_dist[1]))
+        points_per_unit = np.math.ceil(np.random.uniform(points_per_unit_dist[0], points_per_unit_dist[1]))
         num_points = np.math.ceil(dist * points_per_unit)
         intermediate_points = np.linspace(start_point, end_point, num_points)
         intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
         trace += intermediate_points
 
     trace = [trace[idx] for idx in range(len(trace) - 1) if trace[idx] != trace[idx+1]]  # filter out adjacent duplicates
+
+    assert len(trace) > 0, 'Error returning empty trace'
 
     return trace
 
