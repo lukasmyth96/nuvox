@@ -1,3 +1,4 @@
+import string
 
 import numpy as np
 
@@ -38,12 +39,19 @@ def get_dataset_of_top_n_words(n, min_length=3):
         min length of words to include
     """
 
-    top_n_words = top_n_list('en', 2*n)  # purposely get too many to allow for filtering
+    # TODO should fine better way of doing this
+    blacklist = string.ascii_lowercase
+    blacklist.remove('a')
+    blacklist.replace('i')
+
+    words = top_n_list('en', 2*n)  # purposely get too many to allow for filtering
 
     # Filtering
-    top_n_words = [w for w in top_n_words if w.isalpha()]
-    top_n_words = [w for w in top_n_words if len(w) >= min_length]
-    top_n_words = top_n_words[:n]
+    words = [w for w in words if w.isalpha()]
+    words = [w for w in words if len(w) >= min_length]
+    words = [w for w in words if w not in blacklist]
+
+    top_n_words = words[:n]
 
     dataset_obj = Dataset()
     dataset_obj.fit_on_text(' '.join(top_n_words))

@@ -3,7 +3,7 @@ import numpy as np
 import nuvox
 
 
-def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(15, 25)):
+def get_random_trace(keyboard, text, add_gradients=True, skip_spacekey=True, min_dist_between_points=0.05):
     """
     Get a trace (list of (x, y) tuples) for the perfect path for a given string of text, that is, the path that
     traverses from centroid to centroid in a straight line.
@@ -13,11 +13,13 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(1
         keyboard object
     text: str
         text to trace
+    add_gradients: bool
+        whether to add the gradient at each point as the third item in each tuple
     skip_spacekey: bool, optional
         whether to skip the space key between each word in trace
-    points_per_unit_dist: tuple
-        range for number of intermediate points to generate for every unit distance covered - value gets randomly
-        selected from range each time
+    min_dist_between_points: float
+        minimum distance between two consecutive points - this should really be equal to the min distance used when
+        recording mouse movement in diplay.py
 
     Returns
     -------
@@ -30,6 +32,9 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(1
 
     if not isinstance(text, str):
         raise ValueError('Parameter: text must be a string')
+
+    if not text:
+        raise ValueError('Paremeter: text is empty - cannot get trace for empty string')
 
     text = text.lower()
     char_list = list(text)
@@ -64,13 +69,8 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(1
 
         end_point = get_random_point(next_key)
 
-        # Determine the number of points to interploate between start and end point
-        dist = np.linalg.norm(np.array(start_point) - np.array(end_point))
-        points_per_unit = np.math.ceil(np.random.uniform(points_per_unit_dist[0], points_per_unit_dist[1]))
-        num_points = np.math.ceil(dist * points_per_unit)
-
         # Get intermediate points
-        intermediate_points = get_intermediate_points
+        intermediate_points = get_intermediate_points(start_point, end_point, min_dist_between_points)
 
         trace += intermediate_points
 
@@ -79,13 +79,48 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(1
             trace.insert(0, start_point)
         trace.append(end_point)
 
-    if not trace:
-        raise Exception('No trace was created - this should never happen')
+    # Remove points that are too close to the previous point
+
+    trace = remove_near_consecutive_points(trace, min_dist_between_points)
+
+    if add_gradients:
+        trace = add_gradients_to_trace(trace)
 
     return trace
 
 
-def get_intermediate_points(start, end, num_points, random_delta_sd=0.02):
+def get_random_point(key, distribution='trunc_normal'):
+    """
+    get a random point from within the keys border
+    Parameters
+    ----------
+    key: nuvox.keyboard.Key
+    distribution: str
+
+    Returns
+    -------
+    (x, y): tuple
+        x, y coord of random point
+    """
+
+    if distribution == 'trunc_normal':
+        x = trunc_normal(mean=key.centroid[0], stddev=key.w / 4, lower=key.x1, upper=key.x2)
+        y = trunc_normal(mean=key.centroid[1], stddev=key.h / 4, lower=key.y1, upper=key.y2)
+        return (x, y)
+
+    else:
+        raise ValueError('Parameter: distribution value {} not handled yet'.format(distribution))
+
+
+def trunc_normal(mean, stddev, lower, upper):
+    while True:
+        num = np.random.normal(mean, stddev)
+        if lower < num < upper:
+            break
+    return num
+
+
+def get_intermediate_points(start, end, min_dist_between_points, random_delta_sd=0.005):
     """
     Get intermediate points between start and end
     Parameters
@@ -93,25 +128,98 @@ def get_intermediate_points(start, end, num_points, random_delta_sd=0.02):
     start: tuple
     end: tuple
         (x, y) coord
-    num_points: int
-        number of points to interpolate between start and end
+    min_dist_between_points: float
+        mininum distance between any two consecutive points in trace
     random_delta_sd: float, optional
         standard deviation for randomly altering position of each point. new position is sampled from normal distribution
         where the mean is the original position and the stddev is random_delta_sd
     Returns
     -------
-    intermediate_points
+    intermediate_points: list[tuple]
+        list of (x, y) rel coordinates
     """
 
-    assert 0 <= random_delta_sd <= 0.05  # enforce sensible range in case of typo
+    assert 0 <= random_delta_sd <= 0.005  # enforce sensible range in case of typo
 
-    intermediate_points = np.linspace(start, end, num_points)
+    intermediate_points = np.linspace(start, end, 25)  # start with many and them remove some based on min_dist_between_points
     intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
 
     # Apply small random delta to each point
     intermediate_points = [tuple(np.random.normal(point, random_delta_sd)) for point in intermediate_points]
 
     return intermediate_points
+
+
+def remove_near_consecutive_points(trace, min_dist):
+    """ remove points that are within a min distance of the previous points
+    Parameters
+    ----------
+    trace: list[tuple]
+    min_dist: float
+        minimum distance between two consecutive points in the final trace
+
+    Returns
+    -------
+    new_trace: list[tuple]
+    """
+    # Remove points that are within min_dist_between_points of the last point
+    new_trace = [trace[0]]  # always keep first point
+    for point in trace[1:]:
+        previous_point = new_trace[-1]  # last point that we are keeping
+        euclidean_dist = np.linalg.norm(np.array(point) - np.array(previous_point))
+        if euclidean_dist > min_dist:
+            new_trace.append(point)
+
+    return new_trace
+
+
+def add_gradients_to_trace(trace):
+    """ At the first derivative at each point as the third item in each tuple within the trace
+
+    Parameters
+    ----------
+    trace: list[tuple]
+        list of relative(x, y) coords in trace
+
+     Returns
+     -------
+     updated_trace: list[tuple]
+        list of (x, y, dy/dx) tuples for each point in trace
+    """
+
+    gradients = get_trace_first_derivatives(trace)
+    updated_trace = [x_y + (dy_dx,) for x_y, dy_dx in zip(trace, gradients)]
+
+    return updated_trace
+
+
+def get_trace_first_derivatives(trace):
+
+    """
+    get list of first derivatives dy/dx at every point in a trace, which we define as the gradient of the inbound vector
+    to a point. The gradient for the start point is always zero.
+
+    Parameters
+    ----------
+    trace: list[tuple]
+        list of (x,y) tuples
+
+    Returns
+    -------
+    derivatives: list[float]
+    """
+
+    derivatives = []
+    for idx in range(1, len(trace)):
+        grad_inbound = np.array((trace[idx][1] - trace[idx-1][1]) / (trace[idx][0] - trace[idx-1][0]))
+
+        derivatives.append(grad_inbound)
+
+    derivatives.append(0)  # gradient at start point is always zero
+
+    assert len(derivatives) == len(trace)
+
+    return derivatives
 
 
 def get_trance_angles(trace):
@@ -155,64 +263,9 @@ def get_trance_angles(trace):
     return angles
 
 
-def get_trace_first_derivatives(trace):
-
-    """
-    get list of first derivatives dy/dx at every point in a trace, that is, the mean of the gradients of the inbound
-    and outboud vectors at a given point
-    Parameters
-    ----------
-    trace: list[tuple]
-        list of (x,y) tuples
-
-    Returns
-    -------
-    derivatives: list[float]
-    """
-
-    derivatives = []
-    for idx in range(1, len(trace) - 1):
-        grad_inbound = np.array((trace[idx][1] - trace[idx-1][1]) / (trace[idx][0] - trace[idx-1][0]))
-        grad_outbound = np.array((trace[idx+1][1] - trace[idx][1]) / (trace[idx+1][0] - trace[idx][0]))
-
-        derivatives.append(np.mean([grad_inbound, grad_outbound]))
-
-    derivatives.append(0)
-    derivatives.insert(0, 0)
-    assert len(derivatives) == len(trace)
-
-    return derivatives
 
 
-def get_random_point(key, distribution='trunc_normal'):
-    """
-    get a random point from within the keys border
-    Parameters
-    ----------
-    key: nuvox.keyboard.Key
-    distribution: str
 
-    Returns
-    -------
-    (x, y): tuple
-        x, y coord of random point
-    """
-
-    if distribution == 'trunc_normal':
-        x = trunc_normal(mean=key.centroid[0], stddev=key.w / 4, lower=key.x1, upper=key.x2)
-        y = trunc_normal(mean=key.centroid[1], stddev=key.h / 4, lower=key.y1, upper=key.y2)
-        return (x, y)
-
-    else:
-        raise ValueError('Parameter: distribution value {} not handled yet'.format(distribution))
-
-
-def trunc_normal(mean, stddev, lower, upper):
-    while True:
-        num = np.random.normal(mean, stddev)
-        if lower < num < upper:
-            break
-    return num
 
 
 

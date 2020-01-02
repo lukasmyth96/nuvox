@@ -7,7 +7,7 @@ import numpy as np
 
 import nuvox
 from nuvox.model import NuvoxModel
-from nuvox.traces import get_trance_angles
+from nuvox.traces import get_random_trace
 
 
 class Display:
@@ -43,7 +43,6 @@ class Display:
         self.gui.bind('<Button-1>', self.b1_down)
         self.gui.bind('<ButtonRelease-1>', self.release_b1)
 
-        self.display_text = ""
         self.display_variable = StringVar()
 
         # dict mapping key_id to TK object
@@ -87,6 +86,16 @@ class Display:
         """ Start display"""
         self.gui.mainloop()
 
+    def predict_on_trace(self):
+        """ run prediction on trace currently held in buffer and add predicted text to the displayed text"""
+        mouse_trace = self.mouse_trace_buffer.copy()
+        mouse_trace.reverse()  # to put list in chronological order
+        predicted_word = self.prediction_model.predict(mouse_trace)
+
+        current_display_text = self.display_variable.get()
+        new_display_text = ' '.join([current_display_text, predicted_word])
+        self.display_variable.set(new_display_text)
+
     def press_key(self, key_id):
         """ method for updating display text when key is pressed"""
 
@@ -95,27 +104,25 @@ class Display:
         key_contents = self.keyboard.key_id_to_contents[key_id]
         random_choice = random.choice(key_contents)
 
-        # self.display_text = self.display_text + str(random_choice)
+        current_display_text = self.display_variable.get()
+        # new_display_text = current_display_text + str(random_choice)
         #
-        # self.display_variable.set(self.display_text)
+        # self.display_variable.set(new_display_text)
 
     def press_enter(self):
-        """ called when enter key is pressed.
+        """
+        Get and plot a random trace for the currently displayed text
 
-        If there is text in the display then this will playback a perfect trace for the text entered otherwise the
-        most recent mouse activity will be played back as a trace.
         """
 
-        mouse_trace = self.mouse_trace_buffer.copy()
-        mouse_trace.reverse()  # to put list in chronological order
-        predicted_word = self.prediction_model.predict(mouse_trace)
+        displayed_text = self.display_variable.get()
+        if displayed_text:
 
-        self.display_text = ' '.join([self.display_text, predicted_word])
-        self.display_variable.set(self.display_text)
+            random_trace = get_random_trace(self.keyboard, displayed_text, add_gradients=False)
+            self.plot_trace(trace=random_trace)
 
     def clear_display(self):
         """ clear display text and trace buffer"""
-        self.display_text = ""
         self.display_variable.set("")
         self.clear_trace()
 
@@ -140,7 +147,7 @@ class Display:
 
         # Automatically predict on trace and then call clear to reset buffer
         if self.mouse_trace_buffer:
-            self.press_enter()  # this function calls the prediction
+            self.predict_on_trace()  # this function calls the prediction
             self.clear_trace()  # clear trace ready for next work
 
     def record_mouse_position(self, event):
@@ -191,11 +198,12 @@ class Display:
             list of relative (x, y) coords to plot
         """
 
-        # rgb_cols = [(255, yellow, 0) for yellow in np.linspace(255, 0, len(trace), dtype=int)]
-        # hex_cols = [rgb_to_hex(rgb) for rgb in rgb_cols]
+        rgb_cols = [(255, yellow, 0) for yellow in np.linspace(255, 0, len(trace), dtype=int)]
+        hex_cols = [rgb_to_hex(rgb) for rgb in rgb_cols]
 
+        # Plot trace with yellow->red heatmap
         for idx, (x, y) in enumerate(trace):
-            self.plot_single_point(x, y)
+            self.plot_single_point(x, y, hex_cols[idx])
 
     def plot_single_point(self, x, y, colour='red'):
         """
