@@ -110,13 +110,17 @@ class Display:
         mouse_trace.reverse()  # to put list in chronological order
         predicted_word = self.prediction_model.predict(mouse_trace)
 
-        self.display_text += predicted_word
+        self.display_text = ' '.join([self.display_text, predicted_word])
         self.display_variable.set(self.display_text)
 
     def clear_display(self):
+        """ clear display text and trace buffer"""
         self.display_text = ""
         self.display_variable.set("")
+        self.clear_trace()
 
+    def clear_trace(self):
+        """ Clear only the trace buffer """
         # destroy all labels and clear trace buffer
         for label in self.trace_labels:
             label.destroy()
@@ -133,6 +137,10 @@ class Display:
     def release_b1(self, event):
         """ release left click"""
         self.left_mouse_down = False
+
+        # Automatically predict on trace and then call clear to reset buffer
+        self.press_enter()  # this function calls the prediction
+        self.clear_trace()  # clear trace ready for next work
 
     def record_mouse_position(self, event):
         """record mouse movement when left mouse button is held down"""
@@ -171,6 +179,8 @@ class Display:
             raise (ValueError('model config must be set before predictions can be made'))
 
         self.prediction_model = model
+
+        print('Available vocab words are: \n\n {}'.format(self.prediction_model.config.VOCAB))
 
     def plot_trace(self, trace):
         """ plot trace
@@ -220,7 +230,7 @@ if __name__ == "__main__":
     _keyboard.build_keyboard(nuvox_standard_keyboard)
 
     _model = NuvoxModel()
-    _model.load_model('../models/02_01_2020_09_30_51')
+    _model.load_model('../models/02_01_2020_10_03_26')
 
     _display = Display(_keyboard, display_width=900, display_height=1200)
     _display.set_prediction_model(_model)

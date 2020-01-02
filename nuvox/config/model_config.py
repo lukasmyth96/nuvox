@@ -3,12 +3,12 @@
 class ModelConfig:
 
     # Training settings
-    EPOCHS = 10
+    EPOCHS = 2000
     EVAL_EPOCHS = 50
     BATCH_SIZE = 32
     SHUFFLE = True
     OPTIMIZER = 'adam'
-    MAX_SEQ_LEN = 200
+    MAX_SEQ_LEN = 100
 
     # Callbacks
     METRIC_TO_MONITOR = 'accuracy'
@@ -20,8 +20,8 @@ class ModelConfig:
     CHECKPOINT_PATH = None
 
     # Data settings - using this while only training on single words at a time
-    NUM_WORDS_TO_TRAIN_ON = 100
-    MIN_WORD_LEN = 3
+    NUM_WORDS_TO_TRAIN_ON = 25
+    MIN_WORD_LEN = 2
 
     # Will be set before training
     VOCAB_SIZE = None
