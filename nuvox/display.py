@@ -239,7 +239,7 @@ if __name__ == "__main__":
     _keyboard.build_keyboard(nuvox_standard_keyboard)
 
     _model = NuvoxModel()
-    _model.load_model('../models/02_01_2020_10_45_26')
+    _model.load_model('../models/02_01_2020_10_45_26_top_1k_no_grads')
 
     _display = Display(_keyboard, display_width=900, display_height=1200)
     _display.set_prediction_model(_model)

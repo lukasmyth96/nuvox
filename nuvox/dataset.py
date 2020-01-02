@@ -28,7 +28,7 @@ class Dataset:
         self.word_to_idx = {word: idx for idx, word in enumerate(self.vocab)}
 
 
-def get_dataset_of_top_n_words(n, min_length=3):
+def get_dataset_of_top_n_words(n, min_length=1):
 
     """ build and return a dataset containing the top n most frequent words
     Parameters
@@ -40,9 +40,9 @@ def get_dataset_of_top_n_words(n, min_length=3):
     """
 
     # TODO should fine better way of doing this
-    blacklist = string.ascii_lowercase
+    blacklist = list(string.ascii_lowercase)
     blacklist.remove('a')
-    blacklist.replace('i')
+    blacklist.remove('i')
 
     words = top_n_list('en', 2*n)  # purposely get too many to allow for filtering
 
@@ -51,7 +51,8 @@ def get_dataset_of_top_n_words(n, min_length=3):
     words = [w for w in words if len(w) >= min_length]
     words = [w for w in words if w not in blacklist]
 
-    top_n_words = words[:n]
+    top_n_words = words[:n -1]
+    top_n_words.append('nuvox')  # gotta include this one
 
     dataset_obj = Dataset()
     dataset_obj.fit_on_text(' '.join(top_n_words))

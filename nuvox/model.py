@@ -51,7 +51,7 @@ class NuvoxModel:
 
     def build_keras_model(self):
         model = Sequential()
-        model.add(LSTM(units=100, input_shape=(self.config.MAX_SEQ_LEN, 2)))
+        model.add(LSTM(units=100, input_shape=(self.config.MAX_SEQ_LEN, self.config.TRACE_DIM)))
         model.add(Dense(self.config.VOCAB_SIZE, activation='softmax'))
         model.compile(optimizer=self.config.OPTIMIZER, loss='categorical_crossentropy', metrics=['accuracy'])
         self.keras_model = model
@@ -101,7 +101,7 @@ class NuvoxModel:
             returns top predicted word for now
         """
         trace = np.array(trace)
-        batch = np.zeros(shape=(self.config.MAX_SEQ_LEN, 2))
+        batch = np.zeros(shape=(self.config.MAX_SEQ_LEN, self.config.TRACE_DIM))
         batch[self.config.MAX_SEQ_LEN - trace.shape[0]:, :] = trace
         batch = np.expand_dims(batch, 0)  # add batch dim
 
@@ -139,7 +139,8 @@ class NuvoxModel:
         self.config = pickle_load(os.path.join(model_dir, 'model_config.pkl'))
         self.keyboard = pickle_load(os.path.join(model_dir, 'keyboard.pkl'))
 
-        self.keras_model = load_model(self.config.CHECKPOINT_PATH)
+        # not using CHECKPOINT_PATH only because I might rename the model dir
+        self.keras_model = load_model(os.path.join(model_dir, os.path.basename(self.config.CHECKPOINT_PATH)))
 
     def set_log_dir(self):
 
@@ -170,7 +171,7 @@ class NuvoxModel:
         max_seq_len = self.config.MAX_SEQ_LEN
         shuffle = self.config.SHUFFLE
 
-        batch = np.zeros(shape=(batch_size, max_seq_len, 2))  # (x, y) only for now
+        batch = np.zeros(shape=(batch_size, max_seq_len, self.config.TRACE_DIM))  # (x, y) only for now
         labels = np.zeros(shape=(batch_size, dataset.vocab_size))
 
         while True:
@@ -179,7 +180,11 @@ class NuvoxModel:
                 random.shuffle(dataset.word_seq)
 
             word = dataset.word_seq[iteration % num_examples]
-            trace = np.array(get_random_trace(self.keyboard, word))  # [seq_len, 2]
+            trace = np.array(get_random_trace(self.keyboard,
+                                              word,
+                                              add_gradients=self.config.ADD_GRADIENT_TO_TRACE,
+                                              min_dist_between_points=self.config.TRACE_MIN_SEPARATION))
+
             label = to_categorical(dataset.word_to_idx[word], num_classes=dataset.vocab_size)  # one-hot
 
             if len(trace) > max_seq_len:
@@ -192,7 +197,7 @@ class NuvoxModel:
 
                 yield batch, labels
 
-                batch = np.zeros(shape=(batch_size, max_seq_len, 2))  # (x, y) only for now
+                batch = np.zeros(shape=(batch_size, max_seq_len, self.config.TRACE_DIM))  # (x, y) only for now
                 labels = np.zeros(shape=(batch_size, dataset.vocab_size))
 
             iteration += 1

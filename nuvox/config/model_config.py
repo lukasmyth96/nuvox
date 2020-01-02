@@ -3,7 +3,7 @@
 class ModelConfig:
 
     # Training settings
-    EPOCHS = 5000
+    EPOCHS = 500
     EVAL_EPOCHS = 50
     BATCH_SIZE = 32
     SHUFFLE = True
@@ -20,8 +20,13 @@ class ModelConfig:
     CHECKPOINT_PATH = None
 
     # Data settings - using this while only training on single words at a time
-    NUM_WORDS_TO_TRAIN_ON = 1000
+    NUM_WORDS_TO_TRAIN_ON = 200
     MIN_WORD_LEN = 1
+
+    # Trace
+    TRACE_MIN_SEPARATION = 0.05
+    ADD_GRADIENT_TO_TRACE = False
+    TRACE_DIM = 2 + int(ADD_GRADIENT_TO_TRACE)
 
     # Will be set before training
     VOCAB_SIZE = None

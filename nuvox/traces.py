@@ -70,7 +70,7 @@ def get_random_trace(keyboard, text, add_gradients=True, skip_spacekey=True, min
         end_point = get_random_point(next_key)
 
         # Get intermediate points
-        intermediate_points = get_intermediate_points(start_point, end_point, min_dist_between_points)
+        intermediate_points = get_intermediate_points(start_point, end_point)
 
         trace += intermediate_points
 
@@ -120,7 +120,7 @@ def trunc_normal(mean, stddev, lower, upper):
     return num
 
 
-def get_intermediate_points(start, end, min_dist_between_points, random_delta_sd=0.005):
+def get_intermediate_points(start, end, random_delta_sd=0.005):
     """
     Get intermediate points between start and end
     Parameters
@@ -128,8 +128,6 @@ def get_intermediate_points(start, end, min_dist_between_points, random_delta_sd
     start: tuple
     end: tuple
         (x, y) coord
-    min_dist_between_points: float
-        mininum distance between any two consecutive points in trace
     random_delta_sd: float, optional
         standard deviation for randomly altering position of each point. new position is sampled from normal distribution
         where the mean is the original position and the stddev is random_delta_sd

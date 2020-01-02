@@ -68,6 +68,40 @@ class Keyboard:
         for char in key.contents:
             self.char_to_key.update({char: key})
 
+    def get_discrete_representation(self, text, skip_spacekey=True):
+        """ Get the discrete representation of the trace for a given text, that is a list containing the key_id's
+        for the sequence of keys that must be traversed for the given text
+
+        Parameters
+        ----------
+        text: str
+        skip_spacekey: bool
+            whether to skip space key between words
+
+        Returns
+        --------
+        representation: str
+            str containing key_ids
+
+        """
+        char_list = list(text)
+        if skip_spacekey:
+            char_list = [char for char in char_list if char != ' ']
+
+        if not all([char in list(self.char_to_key) for char in text]):
+            invalid_chars = list(set(char_list) - set(list(self.char_to_key)))
+            raise ValueError('text contains following character not included in keybaord: {}'.format(invalid_chars))
+
+        representation = [self.char_to_key[char].key_id for char in char_list]
+
+        # Filter out consecutive duplicates
+        representation = [x[0] for x in itertools.groupby(representation)]
+
+        # Join to one string
+        representation = ''.join(representation)
+
+        return representation
+
     @staticmethod
     def _check_for_invalid_coords(key):
         """ check if key has valid coords - raises ValueError if not"""
