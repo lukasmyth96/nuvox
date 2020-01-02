@@ -27,5 +27,6 @@ class ModelConfig:
     VOCAB_SIZE = None
     VOCAB = None
     WORD_TO_IDX = None
+    IDX_TO_WORD = None
 
 

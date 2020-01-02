@@ -5,7 +5,9 @@ from tkinter import *
 
 import numpy as np
 
-from nuvox.traces import get_random_trace, get_trance_angles
+import nuvox
+from nuvox.model import NuvoxModel
+from nuvox.traces import get_trance_angles
 
 
 class Display:
@@ -27,6 +29,8 @@ class Display:
         self.keyboard = keyboard
         self.display_width = display_width
         self.display_height = display_height
+
+        self.prediction_model = None
 
         self.gui = Tk()
         self.gui.configure(background="light green")
@@ -102,20 +106,12 @@ class Display:
         most recent mouse activity will be played back as a trace.
         """
 
-        current_display_text = self.display_variable.get()
-        if current_display_text == "":
-            obj = Label(self.gui, text='plotting recent mouse activity', bg='gray70')
-            obj.place(relx=0, rely=0, relwidth=2/3, relheight=0.2)
-            mouse_trace = self.mouse_trace_buffer.copy()
-            mouse_trace.reverse()  # reverse because newest added to left
-            self.plot_trace(trace=mouse_trace)
-        else:
-            perfect_trace = get_random_trace(self.keyboard, current_display_text)
-            obj = Label(self.gui, text='plotting perfect trace for: \'{}\''.format(current_display_text), bg='gray70')
-            obj.place(relx=0, rely=0, relwidth=2/3, relheight=0.2)
-            self.plot_trace(perfect_trace)
+        mouse_trace = self.mouse_trace_buffer.copy()
+        mouse_trace.reverse()  # to put list in chronological order
+        predicted_word = self.prediction_model.predict(mouse_trace)
 
-        self.trace_labels.append(obj)
+        self.display_text += predicted_word
+        self.display_variable.set(self.display_text)
 
     def clear_display(self):
         self.display_text = ""
@@ -124,6 +120,7 @@ class Display:
         # destroy all labels and clear trace buffer
         for label in self.trace_labels:
             label.destroy()
+
         self.mouse_trace_buffer.clear()
 
     def exit(self):
@@ -152,7 +149,28 @@ class Display:
                 euclidean_dist = np.linalg.norm(np.array((relx, rely) - np.array((prev_coords))))
                 if euclidean_dist > 0.05 or not self.mouse_trace_buffer:
                     self.mouse_trace_buffer.appendleft((relx, rely))
+
+                    self.plot_single_point(relx, rely)
+
                     print('x={:.2f}, y={:.2f}'.format(relx, rely))
+
+    def set_prediction_model(self, model):
+        """
+        Set prediction model - carry out some checks on the model
+        Parameters
+        ----------
+        model: nuvox.model.NuvoxModel
+        """
+
+        # TODO will need some way of checking that the models keyboard is the same as the one set for display
+
+        if not isinstance(model, nuvox.model.NuvoxModel):
+            raise ValueError('Parameter: model must be an instance of nuvox.model.NuvoxModel')
+
+        if model.config is None:
+            raise (ValueError('model config must be set before predictions can be made'))
+
+        self.prediction_model = model
 
     def plot_trace(self, trace):
         """ plot trace
@@ -165,19 +183,26 @@ class Display:
         # rgb_cols = [(255, yellow, 0) for yellow in np.linspace(255, 0, len(trace), dtype=int)]
         # hex_cols = [rgb_to_hex(rgb) for rgb in rgb_cols]
 
-        # TODO delete after testing
-        trace_angles = get_trance_angles(trace)
-        rgb_cols = [(255, int(255 - angle * (255 / np.math.pi)), 0) for angle in trace_angles]
-        hex_cols = [rgb_to_hex(rgb) for rgb in rgb_cols]
-
-        self.gui.unbind('<Motion>')  # temporarily unbind motion tracker
         for idx, (x, y) in enumerate(trace):
-            obj = Label(self.gui, text='', bg=hex_cols[idx])
-            obj.place(relx=x, rely=y, relwidth=0.01, relheight=0.01)
-            self.trace_labels.append(obj)
-            self.gui.update()
-            time.sleep(0.05)
-        self.gui.bind('<Motion>', self.record_mouse_position)  # re-bind motion tracking after complete
+            self.plot_single_point(x, y)
+
+    def plot_single_point(self, x, y, colour='red'):
+        """
+        Plot single point of trace
+        Parameters
+        ----------
+        x: float
+        y: float
+        colour: str
+            colour name of hex string
+        """
+
+        assert 0 <= x <= 1
+        assert 0 <= y <= 1
+        obj = Label(self.gui, text='', bg=colour)  # all same colour for now
+        obj.place(relx=x, rely=y, relwidth=0.01, relheight=0.01)
+        self.trace_labels.append(obj)
+        self.gui.update()
 
 
 def rgb_to_hex(rgb):
@@ -193,7 +218,12 @@ if __name__ == "__main__":
 
     _keyboard = Keyboard()
     _keyboard.build_keyboard(nuvox_standard_keyboard)
+
+    _model = NuvoxModel()
+    _model.load_model('../models/02_01_2020_09_30_51')
+
     _display = Display(_keyboard, display_width=900, display_height=1200)
+    _display.set_prediction_model(_model)
     _display.start_display()
 
 

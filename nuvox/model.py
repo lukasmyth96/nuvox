@@ -45,6 +45,7 @@ class NuvoxModel:
         self.config.VOCAB = dataset.vocab
         self.config.VOCAB_SIZE = dataset.vocab_size
         self.config.WORD_TO_IDX = dataset.word_to_idx
+        self.config.IDX_TO_WORD = {v: k for k, v in dataset.word_to_idx.items()}
 
         self.is_vocabulary_set = True
 
@@ -88,11 +89,28 @@ class NuvoxModel:
                                        callbacks=callbacks,
                                        verbose=1)
 
-    def predict(self, batch):
+    def predict(self, trace):
+        """ predict word from trace (list of (x,y) coords)
+        Parameters
+        ----------
+        trace: list[tuples]
+            list of (x,y) coordinates of trace
 
-        pred = self.keras_model.predict_on_batch(batch)
+        Returns:
+        predicted_text: str
+            returns top predicted word for now
+        """
+        trace = np.array(trace)
+        batch = np.zeros(shape=(self.config.MAX_SEQ_LEN, 2))
+        batch[self.config.MAX_SEQ_LEN - trace.shape[0]:, :] = trace
+        batch = np.expand_dims(batch, 0)  # add batch dim
 
-        return pred
+        pred_probas = self.keras_model.predict_on_batch(batch)
+
+        top_word_idx = np.argmax(pred_probas)
+        top_word = self.config.IDX_TO_WORD[top_word_idx]
+
+        return top_word
 
     def evaluate(self, dataset):
 
@@ -183,9 +201,9 @@ class NuvoxModel:
 if __name__ == '__main__':
 
     model = NuvoxModel()
-    model.load_model('../models/01_01_2020_19_01_17')
+    model.load_model('../models/02_01_2020_09_30_51')
 
-    trace = np.array(get_random_trace(model.keyboard, 'the'))
+    trace = get_random_trace(model.keyboard, 'the')
     pred = model.predict(trace)
     print('stop here')
 
