@@ -43,16 +43,21 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(1
 
     trace = []
 
-    for idx, (current_char, next_char) in enumerate(zip(char_list, char_list[1:])):
-        curr_key = keyboard.char_to_key[current_char]
-        next_key = keyboard.char_to_key[next_char]
+    for idx in range(max(1, len(text)-1)):
+
+        curr_key = keyboard.char_to_key[char_list[idx]]
+
+        if len(text) == 1:
+            next_key = curr_key
+        else:
+            next_key = keyboard.char_to_key[char_list[idx+1]]
 
         # Get list of intermediate points - the number of which is proportional to the distance between the centroid
 
         if idx == 0:
             start_point = get_random_point(curr_key)
         else:
-            start_point = end_point
+            start_point = end_point  # start point becomes the end point from the previous iteration
 
         if idx > 0 and curr_key == next_key:
             continue
@@ -66,10 +71,14 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(1
         intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
         trace += intermediate_points
 
+        if idx == 0:
+            trace.insert(0, start_point)
+        trace.append(end_point)
+
     trace = [trace[idx] for idx in range(len(trace) - 1) if trace[idx] != trace[idx+1]]  # filter out adjacent duplicates
 
     if not trace:
-        return get_random_trace(keyboard, text, skip_spacekey, points_per_unit_dist)  # try again
+        raise Exception('No trace was created - this should never happen')
 
     return trace
 

@@ -201,9 +201,10 @@ class NuvoxModel:
 if __name__ == '__main__':
 
     model = NuvoxModel()
-    model.load_model('../models/02_01_2020_09_30_51')
+    model.load_model('../models/02_01_2020_10_03_26')
 
-    trace = get_random_trace(model.keyboard, 'the')
+    trace = get_random_trace(model.keyboard, 'a')
+    trace2 = get_random_trace(model.keyboard, 'the')
     pred = model.predict(trace)
     print('stop here')
 
