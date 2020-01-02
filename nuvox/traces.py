@@ -64,23 +64,54 @@ def get_random_trace(keyboard, text, skip_spacekey=True, points_per_unit_dist=(1
 
         end_point = get_random_point(next_key)
 
+        # Determine the number of points to interploate between start and end point
         dist = np.linalg.norm(np.array(start_point) - np.array(end_point))
         points_per_unit = np.math.ceil(np.random.uniform(points_per_unit_dist[0], points_per_unit_dist[1]))
         num_points = np.math.ceil(dist * points_per_unit)
-        intermediate_points = np.linspace(start_point, end_point, num_points)
-        intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
+
+        # Get intermediate points
+        intermediate_points = get_intermediate_points
+
         trace += intermediate_points
 
+        # Add start and end point
         if idx == 0:
             trace.insert(0, start_point)
         trace.append(end_point)
-
-    trace = [trace[idx] for idx in range(len(trace) - 1) if trace[idx] != trace[idx+1]]  # filter out adjacent duplicates
 
     if not trace:
         raise Exception('No trace was created - this should never happen')
 
     return trace
+
+
+def get_intermediate_points(start, end, num_points, random_delta_sd=0.02):
+    """
+    Get intermediate points between start and end
+    Parameters
+    ----------
+    start: tuple
+    end: tuple
+        (x, y) coord
+    num_points: int
+        number of points to interpolate between start and end
+    random_delta_sd: float, optional
+        standard deviation for randomly altering position of each point. new position is sampled from normal distribution
+        where the mean is the original position and the stddev is random_delta_sd
+    Returns
+    -------
+    intermediate_points
+    """
+
+    assert 0 <= random_delta_sd <= 0.05  # enforce sensible range in case of typo
+
+    intermediate_points = np.linspace(start, end, num_points)
+    intermediate_points = [tuple(point) for point in intermediate_points]  # convert to list of tuples
+
+    # Apply small random delta to each point
+    intermediate_points = [tuple(np.random.normal(point, random_delta_sd)) for point in intermediate_points]
+
+    return intermediate_points
 
 
 def get_trance_angles(trace):

@@ -95,9 +95,9 @@ class Display:
         key_contents = self.keyboard.key_id_to_contents[key_id]
         random_choice = random.choice(key_contents)
 
-        self.display_text = self.display_text + str(random_choice)
-
-        self.display_variable.set(self.display_text)
+        # self.display_text = self.display_text + str(random_choice)
+        #
+        # self.display_variable.set(self.display_text)
 
     def press_enter(self):
         """ called when enter key is pressed.
@@ -139,8 +139,9 @@ class Display:
         self.left_mouse_down = False
 
         # Automatically predict on trace and then call clear to reset buffer
-        self.press_enter()  # this function calls the prediction
-        self.clear_trace()  # clear trace ready for next work
+        if self.mouse_trace_buffer:
+            self.press_enter()  # this function calls the prediction
+            self.clear_trace()  # clear trace ready for next work
 
     def record_mouse_position(self, event):
         """record mouse movement when left mouse button is held down"""
@@ -230,7 +231,7 @@ if __name__ == "__main__":
     _keyboard.build_keyboard(nuvox_standard_keyboard)
 
     _model = NuvoxModel()
-    _model.load_model('../models/02_01_2020_10_03_26')
+    _model.load_model('../models/02_01_2020_10_45_26')
 
     _display = Display(_keyboard, display_width=900, display_height=1200)
     _display.set_prediction_model(_model)
