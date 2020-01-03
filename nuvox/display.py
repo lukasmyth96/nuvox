@@ -61,9 +61,9 @@ class Display:
                 callback = lambda id: lambda: self.press_key(id)
                 obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=callback(key.key_id), font=("Calibri 18"))
 
-            elif key.type == 'enter_button':
+            elif key.type == 'delete_button':
                 text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.press_enter(), font=("Calibri 10"))
+                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.press_delete(), font=("Calibri 10"))
 
             elif key.type == 'clear_button':
                 text = ' '.join(key.contents).upper()
@@ -109,17 +109,15 @@ class Display:
         #
         # self.display_variable.set(new_display_text)
 
-    def press_enter(self):
+    def press_delete(self):
         """
-        Get and plot a random trace for the currently displayed text
-
+        Delete last word on display
         """
-
-        displayed_text = self.display_variable.get()
-        if displayed_text:
-
-            random_trace = get_random_trace(self.keyboard, displayed_text, add_gradients=False)
-            self.plot_trace(trace=random_trace)
+        current_display_text = self.display_variable.get()
+        words = current_display_text.split(' ')
+        new_words = words[:-1]
+        new_display_text = ' '.join(new_words)
+        self.display_variable.set(new_display_text)
 
     def clear_display(self):
         """ clear display text and trace buffer"""
