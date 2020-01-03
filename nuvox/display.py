@@ -74,7 +74,7 @@ class Display:
                 obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.exit(), font=("Calibri 10"))
 
             elif key.type == 'display':
-                obj = Entry(self.gui, textvariable=self.display_variable, font=("Calibri 18"))
+                obj = Entry(self.gui, textvariable=self.display_variable, font=("Calibri 12"))
 
             else:
                 raise ValueError('Key type: {} not handled yet in build_display method'.format(key.type))
