@@ -89,16 +89,19 @@ class NuvoxModel:
                                        callbacks=callbacks,
                                        verbose=1)
 
-    def predict(self, trace):
+    def predict(self, trace, top_n=5):
         """ predict word from trace (list of (x,y) coords)
         Parameters
         ----------
         trace: list[tuples]
             list of (x,y) coordinates of trace
+        top_n: int
+            the number of words to return
 
         Returns:
-        predicted_text: str
-            returns top predicted word for now
+        --------
+        top_words: list[str]
+            list of top n predicted words
         """
 
         if self.config.TRACE_DIM == 3:
@@ -111,10 +114,10 @@ class NuvoxModel:
 
         pred_probas = self.keras_model.predict_on_batch(batch)
 
-        top_word_idx = np.argmax(pred_probas)
-        top_word = self.config.IDX_TO_WORD[top_word_idx]
+        top_word_indices = pred_probas[0].argsort()[-top_n:][::-1]
+        top_words = [self.config.IDX_TO_WORD[idx] for idx in top_word_indices]
 
-        return top_word
+        return top_words
 
     def evaluate(self, dataset):
 

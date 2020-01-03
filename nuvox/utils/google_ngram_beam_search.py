@@ -96,7 +96,7 @@ class NgramBeamSearch:
 
 
 if __name__ == '__main__':
-
+    """ testing"""
     beam = NgramBeamSearch(beam_width=2)
     beam.top_n_so_far = ['what']
     pred_words = ['adfdsd', 'is']
