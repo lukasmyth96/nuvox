@@ -15,7 +15,7 @@ corpora = dict(eng_us_2012=17, eng_us_2009=5, eng_gb_2012=18, eng_gb_2009=6,
                ita_2012=22)
 
 
-def get_ngram_freqs(query, corpus, start_year=1990, end_year=2020, smoothing=3, case_insensitive=False):
+def get_ngram_freqs(query, corpus='eng_2012', start_year=1990, end_year=2008, smoothing=3, case_insensitive=True):
     params = dict(content=query, year_start=start_year, year_end=end_year,
                   corpus=corpora[corpus], smoothing=smoothing,
                   case_insensitive=case_insensitive)
