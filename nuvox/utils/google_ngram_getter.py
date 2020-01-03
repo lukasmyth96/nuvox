@@ -15,10 +15,10 @@ corpora = dict(eng_us_2012=17, eng_us_2009=5, eng_gb_2012=18, eng_gb_2009=6,
                ita_2012=22)
 
 
-def getNgrams(query, corpus, startYear, endYear, smoothing, caseInsensitive):
-    params = dict(content=query, year_start=startYear, year_end=endYear,
+def get_ngram_freqs(query, corpus, start_year=1990, end_year=2020, smoothing=3, case_insensitive=False):
+    params = dict(content=query, year_start=start_year, year_end=end_year,
                   corpus=corpora[corpus], smoothing=smoothing,
-                  case_insensitive=caseInsensitive)
+                  case_insensitive=case_insensitive)
     if params['case_insensitive'] is False:
         params.pop('case_insensitive')
     if '?' in params['content']:
@@ -31,42 +31,48 @@ def getNgrams(query, corpus, startYear, endYear, smoothing, caseInsensitive):
         data = {qry['ngram']: qry['timeseries']
                 for qry in literal_eval(res[0])}
         df = DataFrame(data)
-        df.insert(0, 'year', list(range(startYear, endYear + 1)))
+        df.insert(0, 'year', list(range(start_year, end_year + 1)))
     else:
         df = DataFrame()
     return req.url, params['content'], df
 
 
-def runQuery(argumentString):
-    arguments = argumentString.split()
+def run_query(arg_string):
+    """
+    Run command line query
+    Parameters
+    ----------
+    arg_string: str
+    """
+    arguments = arg_string.split()
     query = ' '.join([arg for arg in arguments if not arg.startswith('-')])
     if '?' in query:
         query = query.replace('?', '*')
     if '@' in query:
         query = query.replace('@', '=>')
     params = [arg for arg in arguments if arg.startswith('-')]
-    corpus, startYear, endYear, smoothing = 'eng_2012', 1800, 2000, 3
-    printHelp, caseInsensitive, allData = False, False, False
-    toSave, toPrint, toPlot = True, True, False
+    corpus, start_year, end_year, smoothing = 'eng_2012', 1990, 2000, 3
+    printHelp, case_insensitive, allData = False, False, False
+    save, to_print, to_plot = False, True, False
 
     # parsing the query parameters
     for param in params:
-        if '-nosave' in param:
-            toSave = False
-        elif '-noprint' in param:
-            toPrint = False
+        if '-save' in param:
+            save = True
+        elif '-print' in param:
+            to_print = True
         elif '-plot' in param:
-            toPlot = True
+            to_plot = True
         elif '-corpus' in param:
             corpus = param.split('=')[1].strip()
-        elif '-startYear' in param:
-            startYear = int(param.split('=')[1])
-        elif '-endYear' in param:
-            endYear = int(param.split('=')[1])
+        elif '-start_year' in param:
+            start_year = int(param.split('=')[1])
+        elif '-end_year' in param:
+            end_year = int(param.split('=')[1])
         elif '-smoothing' in param:
             smoothing = int(param.split('=')[1])
-        elif '-caseInsensitive' in param:
-            caseInsensitive = True
+        elif '-case_insensitive' in param:
+            case_insensitive = True
         elif '-alldata' in param:
             allData = True
         elif '-help' in param:
@@ -76,24 +82,24 @@ def runQuery(argumentString):
     if printHelp:
         print('See README file.')
     else:
-        if '*' in query and caseInsensitive is True:
-            caseInsensitive = False
+        if '*' in query and case_insensitive is True:
+            case_insensitive = False
             notifyUser = True
             warningMessage = "*NOTE: Wildcard and case-insensitive " + \
                              "searches can't be combined, so the " + \
                              "case-insensitive option was ignored."
-        elif '_INF' in query and caseInsensitive is True:
-            caseInsensitive = False
+        elif '_INF' in query and case_insensitive is True:
+            case_insensitive = False
             notifyUser = True
             warningMessage = "*NOTE: Inflected form and case-insensitive " + \
                              "searches can't be combined, so the " + \
                              "case-insensitive option was ignored."
         else:
             notifyUser = False
-        url, urlquery, df = getNgrams(query, corpus, startYear, endYear,
-                                      smoothing, caseInsensitive)
+        url, urlquery, df = get_ngram_freqs(query, corpus, start_year, end_year,
+                                            smoothing, case_insensitive)
         if not allData:
-            if caseInsensitive is True:
+            if case_insensitive is True:
                 for col in df.columns:
                     if col.count('(All)') == 1:
                         df[col.replace(' (All)', '')] = df.pop(col)
@@ -114,7 +120,7 @@ def runQuery(argumentString):
                 for col in df.columns:
                     if '*' in col:
                         df.pop(col)
-        if toPrint:
+        if to_print:
             print((','.join(df.columns.tolist())))
             for row in df.iterrows():
                 try:
@@ -125,26 +131,26 @@ def runQuery(argumentString):
         queries = ''.join(urlquery.replace(',', '_').split())
         if '*' in queries:
             queries = queries.replace('*', 'WILDCARD')
-        if caseInsensitive is True:
-            word_case = 'caseInsensitive'
+        if case_insensitive is True:
+            word_case = 'case_insensitive'
         else:
             word_case = 'caseSensitive'
-        filename = '%s-%s-%d-%d-%d-%s.csv' % (queries, corpus, startYear,
-                                              endYear, smoothing, word_case)
-        if toSave:
+        filename = '%s-%s-%d-%d-%d-%s.csv' % (queries, corpus, start_year,
+                                              end_year, smoothing, word_case)
+        if save:
             for col in df.columns:
                 if '&gt;' in col:
                     df[col.replace('&gt;', '>')] = df.pop(col)
             df.to_csv(filename, index=False)
-            print(('Data saved to %s' % filename))
-        if toPlot:
+            print(('Data to_saved to %s' % filename))
+        if to_plot:
             try:
                 subprocess.call(['python', 'xkcd.py', filename])
             except:
-                if not toSave:
+                if not save:
                     print(('Currently, if you want to create a plot you ' +
-                           'must also save the data. Rerun your query, ' +
-                           'removing the -nosave option.'))
+                           'must also to_save the data. Rerun your query, ' +
+                           'removing the -save option.'))
                 else:
                     print(('Plotting Failed: %s' % filename))
         if notifyUser:
@@ -157,6 +163,6 @@ if __name__ == '__main__':
         argumentString = eval(input('Enter query (or -help):'))
     else:
         try:
-            runQuery(argumentString)
+            run_query(argumentString)
         except:
             print('An error occurred.')
