@@ -209,7 +209,11 @@ def get_trace_first_derivatives(trace):
 
     derivatives = []
     for idx in range(1, len(trace)):
-        grad_inbound = np.array((trace[idx][1] - trace[idx-1][1]) / (trace[idx][0] - trace[idx-1][0]))
+        try:
+            grad_inbound = np.array((trace[idx][1] - trace[idx-1][1]) / (trace[idx][0] - trace[idx-1][0]))
+        except ZeroDivisionError:
+            # If no change in x coordinate then assign a 100 or -100 gradient
+            grad_inbound = np.copysign(100, trace[idx][1] - trace[idx-1][1])
 
         derivatives.append(grad_inbound)
 

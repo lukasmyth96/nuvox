@@ -11,7 +11,7 @@ from keras.models import Sequential, load_model
 from keras.utils import to_categorical
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 
-from nuvox.traces import get_random_trace
+from nuvox.traces import get_random_trace, add_gradients_to_trace
 from nuvox.utils.common import pickle_save, pickle_load
 
 
@@ -100,6 +100,10 @@ class NuvoxModel:
         predicted_text: str
             returns top predicted word for now
         """
+
+        if self.config.TRACE_DIM == 3:
+            trace = add_gradients_to_trace(trace)
+
         trace = np.array(trace)
         batch = np.zeros(shape=(self.config.MAX_SEQ_LEN, self.config.TRACE_DIM))
         batch[self.config.MAX_SEQ_LEN - trace.shape[0]:, :] = trace
@@ -203,15 +207,6 @@ class NuvoxModel:
             iteration += 1
 
 
-if __name__ == '__main__':
-
-    model = NuvoxModel()
-    model.load_model('../models/02_01_2020_10_03_26')
-
-    trace = get_random_trace(model.keyboard, 'a')
-    trace2 = get_random_trace(model.keyboard, 'the')
-    pred = model.predict(trace)
-    print('stop here')
 
 
 
