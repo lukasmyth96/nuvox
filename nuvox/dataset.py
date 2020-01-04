@@ -2,7 +2,7 @@ import string
 
 import numpy as np
 
-from keras.preprocessing.text import text_to_word_sequence
+from tensorflow.keras.preprocessing.text import text_to_word_sequence
 
 from wordfreq import top_n_list
 

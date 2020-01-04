@@ -7,7 +7,7 @@ import numpy as np
 
 import nuvox
 from nuvox.model import NuvoxModel
-from nuvox.traces import get_random_trace
+from nuvox.utils.google_ngram_beam_search import NgramBeamSearch
 
 
 class Display:
@@ -31,6 +31,9 @@ class Display:
         self.display_height = display_height
 
         self.prediction_model = None
+
+        self.beam_width = 5
+        self.NgramBeamSearch = NgramBeamSearch(beam_width=self.beam_width)
 
         self.gui = Tk()
         self.gui.configure(background="light green")
@@ -90,11 +93,12 @@ class Display:
         """ run prediction on trace currently held in buffer and add predicted text to the displayed text"""
         mouse_trace = self.mouse_trace_buffer.copy()
         mouse_trace.reverse()  # to put list in chronological order
-        predicted_word = self.prediction_model.predict(mouse_trace)
+        predicted_words = self.prediction_model.predict(mouse_trace, top_n=self.beam_width)
 
-        current_display_text = self.display_variable.get()
-        new_display_text = ' '.join([current_display_text, predicted_word])
-        self.display_variable.set(new_display_text)
+        # Use google n-gram beam search to get new top phrase
+        top_phrase = self.NgramBeamSearch.get_new_top_phrase(predicted_words)
+
+        self.display_variable.set(top_phrase)
 
     def press_key(self, key_id):
         """ method for updating display text when key is pressed"""
@@ -119,10 +123,13 @@ class Display:
         new_display_text = ' '.join(new_words)
         self.display_variable.set(new_display_text)
 
+        self.NgramBeamSearch.delete_last_word()
+
     def clear_display(self):
         """ clear display text and trace buffer"""
         self.display_variable.set("")
         self.clear_trace()
+        self.NgramBeamSearch.clear()
 
     def clear_trace(self):
         """ Clear only the trace buffer """

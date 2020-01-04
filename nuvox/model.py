@@ -6,10 +6,11 @@ import random
 
 import numpy as np
 
-from keras.layers import Input, LSTM, TimeDistributed, Dense
-from keras.models import Sequential, load_model
-from keras.utils import to_categorical
-from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
+# noinspection PyUnresolvedReferences
+from tensorflow.keras.layers import Input, LSTM, TimeDistributed, Dense
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 
 from nuvox.traces import get_random_trace, add_gradients_to_trace
 from nuvox.utils.common import pickle_save, pickle_load
@@ -89,7 +90,7 @@ class NuvoxModel:
                                        callbacks=callbacks,
                                        verbose=1)
 
-    def predict(self, trace, top_n=5):
+    def predict(self, trace, top_n=5, min_return_confidence=0.1):
         """ predict word from trace (list of (x,y) coords)
         Parameters
         ----------
@@ -97,6 +98,8 @@ class NuvoxModel:
             list of (x,y) coordinates of trace
         top_n: int
             the number of words to return
+        min_return_confidence: float
+            minimum confidence required in order to return a predicted word
 
         Returns:
         --------
@@ -113,9 +116,9 @@ class NuvoxModel:
         batch = np.expand_dims(batch, 0)  # add batch dim
 
         pred_probas = self.keras_model.predict_on_batch(batch)
-
+        pred_probas = pred_probas.numpy()  # convert eager tensor object to numpy array
         top_word_indices = pred_probas[0].argsort()[-top_n:][::-1]
-        top_words = [self.config.IDX_TO_WORD[idx] for idx in top_word_indices]
+        top_words = [self.config.IDX_TO_WORD[idx] for idx in top_word_indices if pred_probas[0, idx] > min_return_confidence]
 
         return top_words
 

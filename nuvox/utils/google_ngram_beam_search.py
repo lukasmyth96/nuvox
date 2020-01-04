@@ -1,4 +1,5 @@
 import itertools
+from pprint import pprint
 
 import numpy as np
 
@@ -37,6 +38,8 @@ class NgramBeamSearch:
         new_phrase: str
         """
 
+        print('pred words: ', pred_words)  #TODO delete after debugging
+
         if not self.top_n_so_far:
             self.top_n_so_far = pred_words  # if first word in phrase
         else:
@@ -47,6 +50,9 @@ class NgramBeamSearch:
             ranked_list = sorted(freq_dict, key=freq_dict.get)[::-1]
             self.top_n_so_far = ranked_list[:self.beam_width]
 
+            pprint(freq_dict)
+
+        print('top n so far: ', self.top_n_so_far)  # TODO delete after debugging
         return self.top_n_so_far[0]
 
     def get_ngram_frequencies(self, phrases):
@@ -68,7 +74,7 @@ class NgramBeamSearch:
         for phrase in phrases:
 
             words = phrase.split(' ')
-            query_list.append(' '.join(words[-5:]))  # can only n-grams of max length 5
+            query_list.append(' '.join(words[-3:]))  # can only n-grams of max length 5
 
         combined_query = ', '.join(query_list)
 
@@ -86,13 +92,22 @@ class NgramBeamSearch:
                 freq_dict[phrase] = np.mean(freq_values)  # (All) get case insensitive freqs
             else:
                 freq_dict[phrase] = 0.0
-                print('warning! no frequency data returned for phrase \'{}\' - assuming frequency value is zero')
+                print('warning! no data returned by google API for phrase \'{}\' - assuming frequency value is zero'.format(phrase))
 
         return freq_dict
 
     def clear(self):
         """ clear list of current top n"""
         self.top_n_so_far = []
+
+    def delete_last_word(self):
+        """ delete the last word from each of the top n phrases"""
+        current_top_phrases = self.top_n_so_far
+        self.top_n_so_far = []
+        for phrase in current_top_phrases:
+            words = phrase.split(' ')
+            new_phrase = ' '.join(words[:-1])
+            self.top_n_so_far.append(new_phrase)
 
 
 if __name__ == '__main__':
