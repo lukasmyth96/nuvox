@@ -1,4 +1,5 @@
 import itertools
+import string
 
 import numpy as np
 
@@ -14,7 +15,7 @@ class GPT2:
 
     def __init__(self):
 
-        self.keras_model = TFGPT2LMHeadModel.from_pretrained('/home/luka/PycharmProjects/nuvox/models/distilled_gpt2')
+        self.keras_model = TFGPT2LMHeadModel.from_pretrained('/home/luka/PycharmProjects/nuvox/models/language_models/distilled_gpt2')
         print('\n\n Finished loading pretrained model')
 
         self.max_seq_len = 16
@@ -79,6 +80,10 @@ class GPT2:
 
         return sentence_probs
 
+    def get_current_top_phrase(self):
+        """ return current top phrase"""
+        return self.top_phrases_so_far[0].lstrip('. ')
+
     def get_new_top_phrase(self, pred_words):
 
         """
@@ -106,6 +111,19 @@ class GPT2:
         self.top_phrases_so_far = [phrases_to_query[idx] for idx in top_phrase_indices]
 
         return self.top_phrases_so_far[0].lstrip('. ')  # return just top phrase
+
+    def manually_add_word(self, word):
+        """ manually add a single word to all of the current top phrases
+        this is used for example when , . ? or a i are pressed on the display
+        """
+        current_top_phrases = self.top_phrases_so_far
+        self.top_phrases_so_far = []
+        for phrase in current_top_phrases:
+            if word in string.punctuation:
+                phrase += word
+            else:
+                phrase += ' {}'.format(word)
+            self.top_phrases_so_far.append(phrase)
 
     def reset(self):
         """ Reset top phrases - called when clear button is called from display"""

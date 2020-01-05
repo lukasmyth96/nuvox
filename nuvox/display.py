@@ -32,7 +32,7 @@ class Display:
 
         self.prediction_model = None
 
-        self.beam_width = 5
+        self.beam_width = 6
 
         self.language_model = GPT2()
         self.language_model.beam_width = self.beam_width
@@ -79,7 +79,7 @@ class Display:
                 obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.exit(), font=("Calibri 10"))
 
             elif key.type == 'display':
-                obj = Entry(self.gui, textvariable=self.display_variable, font=("Calibri 12"))
+                obj = Entry(self.gui, textvariable=self.display_variable, font=("Calibri 8"))
 
             else:
                 raise ValueError('Key type: {} not handled yet in build_display method'.format(key.type))
@@ -109,15 +109,25 @@ class Display:
     def press_key(self, key_id):
         """ method for updating display text when key is pressed"""
 
-        # TODO currently just selects character randomly from the keys contents
+        # TODO remove hard coding here
+        display_text = self.display_variable.get()
 
-        key_contents = self.keyboard.key_id_to_contents[key_id]
-        random_choice = random.choice(key_contents)
+        if key_id == '1':
+            text_to_add = 'A' if not display_text else 'a'
+        elif key_id == '3':
+            text_to_add = 'I'
+        elif key_id == '10':
+            text_to_add = ','
+        elif key_id == '11':
+            text_to_add = '.'
+        elif key_id == '12':
+            text_to_add = '?'
+        else:
+            text_to_add = ''
 
-        current_display_text = self.display_variable.get()
-        # new_display_text = current_display_text + str(random_choice)
-        #
-        # self.display_variable.set(new_display_text)
+        self.language_model.manually_add_word(text_to_add)
+        self.display_variable.set(self.language_model.get_current_top_phrase())
+
 
     def press_delete(self):
         """
@@ -250,7 +260,7 @@ if __name__ == "__main__":
     _keyboard.build_keyboard(nuvox_standard_keyboard)
 
     _model = TraceModel()
-    _model.load_model('../models/02_01_2020_17_30_42_top2500_078acc')
+    _model.load_model('../models/trace_models/02_01_2020_17_30_42_top2500_078acc')
 
     _display = Display(_keyboard, display_width=900, display_height=1200)
     _display.set_prediction_model(_model)

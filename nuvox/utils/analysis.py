@@ -45,12 +45,12 @@ if __name__ == "__main__":
     n_words = []
     theoretical_maxes = []
     print('Computing theoretical max accuracies...')
-    for n in tqdm(range(100, 50100, 100)):
 
-        dataset = get_dataset_of_top_n_words(n)
-        theoretical_max = get_theoretical_max_accuracy(keyboard, dataset.vocab)
-        n_words.append(n)
-        theoretical_maxes.append(theoretical_max)
+    n = 200000
+    dataset = get_dataset_of_top_n_words(n)
+    theoretical_max = get_theoretical_max_accuracy(keyboard, dataset.vocab)
+    n_words.append(n)
+    theoretical_maxes.append(theoretical_max)
 
     fig, ax = plt.subplots()
     ax.scatter(n_words, theoretical_maxes)

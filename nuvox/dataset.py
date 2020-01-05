@@ -4,7 +4,7 @@ import numpy as np
 
 from tensorflow.keras.preprocessing.text import text_to_word_sequence
 
-from wordfreq import top_n_list
+from nuvox.utils.common import pickle_load
 
 
 class Dataset:
@@ -14,6 +14,7 @@ class Dataset:
         self.vocab = []
         self.vocab_size = 0
         self.word_to_idx = {}
+        self.idx_to_word = {}
 
         self.word_seq = []
         self.num_examples = 0
@@ -26,36 +27,22 @@ class Dataset:
         self.vocab = sorted(list(set(self.word_seq)))
         self.vocab_size = len(self.vocab)
         self.word_to_idx = {word: idx for idx, word in enumerate(self.vocab)}
+        self.idx_to_word = {idx: word for idx, word in enumerate(self.vocab)}
 
 
-def get_dataset_of_top_n_words(n, min_length=1):
+def build_dataset_from_vocab(vocab_file):
 
     """ build and return a dataset containing the top n most frequent words
     Parameters
     ----------
-    n: int
-        num of words to get
-    min_length: int
-        min length of words to include
+    vocab_file: intstr
+        path to vocab pil file - will load as a list of words
     """
 
-    # TODO should fine better way of doing this
-    blacklist = list(string.ascii_lowercase)
-    blacklist.remove('a')
-    blacklist.remove('i')
-
-    words = top_n_list('en', 2*n)  # purposely get too many to allow for filtering
-
-    # Filtering
-    words = [w for w in words if w.isalpha()]
-    words = [w for w in words if len(w) >= min_length]
-    words = [w for w in words if w not in blacklist]
-
-    top_n_words = words[:n -1]
-    top_n_words.append('nuvox')  # gotta include this one
+    vocab = pickle_load(vocab_file)
 
     dataset_obj = Dataset()
-    dataset_obj.fit_on_text(' '.join(top_n_words))
+    dataset_obj.fit_on_text(' '.join(vocab))
 
     return dataset_obj
 
