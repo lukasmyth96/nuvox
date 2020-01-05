@@ -107,6 +107,20 @@ class GPT2:
 
         return self.top_phrases_so_far[0].lstrip('. ')  # return just top phrase
 
+    def reset(self):
+        """ Reset top phrases - called when clear button is called from display"""
+        self.top_phrases_so_far = ['.'] * self.beam_width
+
+    def delete_last_word(self):
+        """ Delete last word from all top phrases - called when del button is pressed on display"""
+
+        current_top_phrases = self.top_phrases_so_far
+        self.top_phrases_so_far = []
+        for phrase in current_top_phrases:
+            words = phrase.split(' ')
+            new_phrase = ' '.join(words[:-1])
+            self.top_phrases_so_far.append(new_phrase)
+
 
 if __name__ == '__main__':
     """ testing"""

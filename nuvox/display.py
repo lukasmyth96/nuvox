@@ -7,7 +7,7 @@ import numpy as np
 
 import nuvox
 from nuvox.trace_model import TraceModel
-from nuvox.utils.google_ngram_beam_search import NgramBeamSearch
+from nuvox.language_model import GPT2
 
 
 class Display:
@@ -33,7 +33,9 @@ class Display:
         self.prediction_model = None
 
         self.beam_width = 5
-        self.NgramBeamSearch = NgramBeamSearch(beam_width=self.beam_width)
+
+        self.language_model = GPT2()
+        self.language_model.beam_width = self.beam_width
 
         self.gui = Tk()
         self.gui.configure(background="light green")
@@ -95,10 +97,14 @@ class Display:
         mouse_trace.reverse()  # to put list in chronological order
         predicted_words = self.prediction_model.predict(mouse_trace, top_n=self.beam_width)
 
-        # Use google n-gram beam search to get new top phrase
-        top_phrase = self.NgramBeamSearch.get_new_top_phrase(predicted_words)
+        # Capitalize first word in new sentence TODO should also check if last char is . or ? or !
+        if self.display_variable.get() == "":
+            predicted_words = [word.capitalize() for word in predicted_words]
 
-        self.display_variable.set(top_phrase)
+        # Use language model to predict new top phrase
+        new_top_phrase = self.language_model.get_new_top_phrase(predicted_words)
+
+        self.display_variable.set(new_top_phrase)
 
     def press_key(self, key_id):
         """ method for updating display text when key is pressed"""
@@ -123,13 +129,13 @@ class Display:
         new_display_text = ' '.join(new_words)
         self.display_variable.set(new_display_text)
 
-        self.NgramBeamSearch.delete_last_word()
+        self.language_model.delete_last_word()
 
     def clear_display(self):
         """ clear display text and trace buffer"""
         self.display_variable.set("")
         self.clear_trace()
-        self.NgramBeamSearch.clear()
+        self.language_model.reset()
 
     def clear_trace(self):
         """ Clear only the trace buffer """
