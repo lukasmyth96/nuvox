@@ -45,15 +45,19 @@ class TraceModel:
 
         self.config.VOCAB = dataset.vocab
         self.config.VOCAB_SIZE = dataset.vocab_size
-        self.config.WORD_TO_IDX = dataset.word_to_idx
-        self.config.IDX_TO_WORD = {v: k for k, v in dataset.word_to_idx.items()}
+        self.config.NUM_UNIQUE_REPR = dataset.num_unique_repr
+
+        self.config.WORD_TO_DISCRETE_REPR = dataset.word_to_discrete_repr
+        self.config.DISCRETE_REPR_TO_WORDS = dataset.discrete_repr_to_words
+        self.config.DISCRETE_REPR_TO_IDX = dataset.discrete_repr_to_idx
+        self.config.IDX_TO_DISCRETE_REPR = dataset.idx_to_discrete_repr
 
         self.is_vocabulary_set = True
 
     def build_keras_model(self):
         model = Sequential()
         model.add(LSTM(units=100, input_shape=(self.config.MAX_SEQ_LEN, self.config.TRACE_DIM)))
-        model.add(Dense(self.config.VOCAB_SIZE, activation='softmax'))
+        model.add(Dense(self.config.NUM_UNIQUE_REPR, activation='softmax'))
         model.compile(optimizer=self.config.OPTIMIZER, loss='categorical_crossentropy', metrics=['accuracy'])
         self.keras_model = model
 
@@ -76,9 +80,12 @@ class TraceModel:
 
         batch_gen = self.batch_generator(dataset)
 
-        steps_per_epoch = np.math.ceil(dataset.num_examples / self.config.BATCH_SIZE)
+        if self.config.STEPS_PER_EPOCH is not None:
+            steps_per_epoch = self.config.STEPS_PER_EPOCH
+        else:
+            steps_per_epoch = np.math.ceil(dataset.num_examples / self.config.BATCH_SIZE)
         
-        callbacks = [TensorBoard(log_dir=self.config.LOG_DIR),
+        callbacks = [TensorBoard(log_dir=self.config.LOG_DIR, profile_batch=0),
                      ModelCheckpoint(filepath=self.config.CHECKPOINT_PATH,
                                      monitor=self.config.METRIC_TO_MONITOR,
                                      save_best_only=True,
@@ -103,8 +110,8 @@ class TraceModel:
 
         Returns:
         --------
-        top_words: list[str]
-            list of top n predicted words
+        possible_words: list[str]
+            possible words to top n most likely paths
         """
 
         if self.config.TRACE_DIM == 3:
@@ -117,10 +124,15 @@ class TraceModel:
 
         pred_probas = self.keras_model.predict_on_batch(batch)
         pred_probas = pred_probas.numpy()  # convert eager tensor object to numpy array
-        top_word_indices = pred_probas[0].argsort()[-top_n:][::-1]
-        top_words = [self.config.IDX_TO_WORD[idx] for idx in top_word_indices if pred_probas[0, idx] > min_return_confidence]
+        top_pred_indices = pred_probas[0].argsort()[-top_n:][::-1]
 
-        return top_words
+        possible_words = []
+        for idx in top_pred_indices:
+            if pred_probas[0, idx] > min_return_confidence:
+                discrete_repr = self.config.IDX_TO_DISCRETE_REPR[idx]
+                possible_words += self.config.DISCRETE_REPR_TO_WORDS[discrete_repr]
+
+        return possible_words
 
     def evaluate(self, dataset):
 
@@ -182,20 +194,21 @@ class TraceModel:
         shuffle = self.config.SHUFFLE
 
         batch = np.zeros(shape=(batch_size, max_seq_len, self.config.TRACE_DIM))  # (x, y) only for now
-        labels = np.zeros(shape=(batch_size, dataset.vocab_size))
+        labels = np.zeros(shape=(batch_size, self.config.NUM_UNIQUE_REPR))
 
         while True:
 
             if iteration % num_examples == 0 and shuffle:
-                random.shuffle(dataset.word_seq)
+                random.shuffle(dataset.vocab)
 
-            word = dataset.word_seq[iteration % num_examples]
+            word = dataset.vocab[iteration % num_examples]
             trace = np.array(get_random_trace(self.keyboard,
                                               word,
                                               add_gradients=self.config.ADD_GRADIENT_TO_TRACE,
                                               min_dist_between_points=self.config.TRACE_MIN_SEPARATION))
 
-            label = to_categorical(dataset.word_to_idx[word], num_classes=dataset.vocab_size)  # one-hot
+            label_idx = self.config.DISCRETE_REPR_TO_IDX[self.config.WORD_TO_DISCRETE_REPR[word]]
+            label = to_categorical(label_idx, num_classes=dataset.num_unique_repr)  # one-hot
 
             if len(trace) > max_seq_len:
                 raise Exception('trace exceeds maximum length: '.format(max_seq_len))
@@ -208,7 +221,7 @@ class TraceModel:
                 yield batch, labels
 
                 batch = np.zeros(shape=(batch_size, max_seq_len, self.config.TRACE_DIM))  # (x, y) only for now
-                labels = np.zeros(shape=(batch_size, dataset.vocab_size))
+                labels = np.zeros(shape=(batch_size, self.config.NUM_UNIQUE_REPR))
 
             iteration += 1
 

@@ -88,9 +88,12 @@ class Keyboard:
         if skip_spacekey:
             char_list = [char for char in char_list if char != ' ']
 
-        if not all([char in list(self.char_to_key) for char in text]):
-            invalid_chars = list(set(char_list) - set(list(self.char_to_key)))
+        valid_chars = list(self.char_to_key) + ['\'']
+        if not all([char in valid_chars for char in text]):
+            invalid_chars = list(set(char_list) - set(valid_chars))
             raise ValueError('text contains following character not included in keybaord: {}'.format(invalid_chars))
+
+        char_list = [char for char in char_list if char != '\'']
 
         representation = [self.char_to_key[char].key_id for char in char_list]
 

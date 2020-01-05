@@ -38,8 +38,9 @@ def get_random_trace(keyboard, text, add_gradients=True, skip_spacekey=True, min
 
     text = text.lower()
     char_list = list(text)
+    char_list = [char for char in char_list if char != '\'']
 
-    if not all([char in list(keyboard.char_to_key) for char in text]):
+    if not all([char in list(keyboard.char_to_key) for char in char_list]):
         invalid_chars = list(set(char_list) - set(list(keyboard.char_to_key)))
         raise ValueError('text contains following character not included in keybaord: {}'.format(invalid_chars))
 
@@ -48,11 +49,11 @@ def get_random_trace(keyboard, text, add_gradients=True, skip_spacekey=True, min
 
     trace = []
 
-    for idx in range(max(1, len(text)-1)):
+    for idx in range(max(1, len(char_list)-1)):
 
         curr_key = keyboard.char_to_key[char_list[idx]]
 
-        if len(text) == 1:
+        if len(char_list) == 1:
             next_key = curr_key
         else:
             next_key = keyboard.char_to_key[char_list[idx+1]]

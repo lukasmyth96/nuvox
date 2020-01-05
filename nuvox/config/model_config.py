@@ -4,7 +4,8 @@ class ModelConfig:
 
     # Training settings
     EPOCHS = 10000
-    EVAL_EPOCHS = 50
+    STEPS_PER_EPOCH = 50
+    EVAL_EPOCHS = 10
     BATCH_SIZE = 32
     SHUFFLE = True
     OPTIMIZER = 'adam'
@@ -15,23 +16,24 @@ class ModelConfig:
     SAVE_BEST_ONLY = True
 
     # Output
-    OUTPUT_DIR = '../models'
+    OUTPUT_DIR = '../models/trace_models'
     LOG_DIR = None  # timestamped sub-dir created on fly during training
     CHECKPOINT_PATH = None
 
-    # Data settings - using this while only training on single words at a time
-    NUM_WORDS_TO_TRAIN_ON = 2500
-    MIN_WORD_LEN = 1
+    # path to vocab file from which the dataset is built - should be a .pkl file containing a python list
+    VOCAB_FILE = '/home/luka/PycharmProjects/nuvox/models/trace_models/vocab.pkl'
 
     # Trace
     TRACE_MIN_SEPARATION = 0.05
     ADD_GRADIENT_TO_TRACE = True
     TRACE_DIM = 2 + int(ADD_GRADIENT_TO_TRACE)
 
-    # Will be set before training
-    VOCAB_SIZE = None
     VOCAB = None
-    WORD_TO_IDX = None
-    IDX_TO_WORD = None
+    VOCAB_SIZE = None
 
+    NUM_UNIQUE_REPR = None
+    WORD_TO_DISCRETE_REPR = None  # dict mapping individual word to it's discrete representation
+    DISCRETE_REPR_TO_WORDS = None  # dict mapping a unique discrete representation to a list of words that share that representation
+    DISCRETE_REPR_TO_IDX = None
+    IDX_TO_DISCRETE_REPR = None
 
