@@ -54,7 +54,7 @@ class GPT2:
         for idx in range(batch_size):
             token_ids = batch[idx]
             idx_of_last_non_pad = np.argmin(token_ids != self.tokenizer.pad_token_id) -1
-            logits = pred[idx][0, idx_of_last_non_pad]
+            logits = pred[0][idx][idx_of_last_non_pad]
             probs = softmax(logits)
             probabilities[idx] = probs.numpy()
 
