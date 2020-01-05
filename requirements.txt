@@ -4,3 +4,4 @@ matplotlib
 tqdm
 pandas
 wordfreq
+scikit-learn

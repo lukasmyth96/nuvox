@@ -16,7 +16,7 @@ from nuvox.traces import get_random_trace, add_gradients_to_trace
 from nuvox.utils.common import pickle_save, pickle_load
 
 
-class NuvoxModel:
+class TraceModel:
 
     def __init__(self, config=None, keyboard=None):
 

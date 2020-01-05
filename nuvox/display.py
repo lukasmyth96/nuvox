@@ -6,7 +6,7 @@ from tkinter import *
 import numpy as np
 
 import nuvox
-from nuvox.model import NuvoxModel
+from nuvox.trace_model import TraceModel
 from nuvox.utils.google_ngram_beam_search import NgramBeamSearch
 
 
@@ -180,13 +180,13 @@ class Display:
         Set prediction model - carry out some checks on the model
         Parameters
         ----------
-        model: nuvox.model.NuvoxModel
+        model: nuvox.trace_model.TraceModel
         """
 
         # TODO will need some way of checking that the models keyboard is the same as the one set for display
 
-        if not isinstance(model, nuvox.model.NuvoxModel):
-            raise ValueError('Parameter: model must be an instance of nuvox.model.NuvoxModel')
+        if not isinstance(model, nuvox.trace_model.TraceModel):
+            raise ValueError('Parameter: model must be an instance of nuvox.trace_model.TraceModel')
 
         if model.config is None:
             raise (ValueError('model config must be set before predictions can be made'))
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     _keyboard = Keyboard()
     _keyboard.build_keyboard(nuvox_standard_keyboard)
 
-    _model = NuvoxModel()
+    _model = TraceModel()
     _model.load_model('../models/02_01_2020_17_30_42_top2500_078acc')
 
     _display = Display(_keyboard, display_width=900, display_height=1200)
