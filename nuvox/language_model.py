@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 
 import tensorflow as tf
@@ -15,12 +17,13 @@ class GPT2:
         self.keras_model = TFGPT2LMHeadModel.from_pretrained('/home/luka/PycharmProjects/nuvox/models/distilled_gpt2')
         print('\n\n Finished loading pretrained model')
 
-        self.max_seq_len = 32
+        self.max_seq_len = 16
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         self.tokenizer.pad_token = '[PAD]'
         self.tokenizer.decoder[self.tokenizer.pad_token_id] = self.tokenizer.pad_token
 
-        self.top_phrases_so_far = []  # list to store current most likely phrases in beam search
+        self.beam_width = 10
+        self.top_phrases_so_far = ["."] * self.beam_width  # list to store current most likely phrases in beam search
 
     def _encode(self, text):
         """ encode single string of text"""
@@ -30,16 +33,18 @@ class GPT2:
 
         return token_ids
 
-    def predict_probabilities(self, sentences):
+    def get_phrase_probabilities(self, sentences):
         """
-        Predict the probability that the next word in each sentence is each word in the vocabulary
+        Get the probability of each sentence occuring
         ----------
         sentences: list[str]
 
         Returns
         -------
-
+        sentence_probs: list
+            list storing the probability for each sentence
         """
+
         batch_size = len(sentences)
         batch = np.zeros((batch_size, self.max_seq_len), dtype=int)
         for idx, sentence in enumerate(sentences):
@@ -48,22 +53,67 @@ class GPT2:
 
         pred = self.keras_model.predict_on_batch(batch)
 
-        probabilities = np.zeros((batch_size, self.tokenizer.vocab_size))
+        sentence_probs = []
 
         softmax = Softmax()
-        for idx in range(batch_size):
-            token_ids = batch[idx]
-            idx_of_last_non_pad = np.argmin(token_ids != self.tokenizer.pad_token_id) -1
-            logits = pred[0][idx][idx_of_last_non_pad]
-            probs = softmax(logits)
-            probabilities[idx] = probs.numpy()
+        for sentence_idx in range(batch_size):
 
-        return probabilities
+            combined_probs = {}  # dict mapping each word in phrase to the probability that it would appear
+            token_ids = batch[sentence_idx]
+            idx_of_last_non_pad = np.argmin(token_ids != self.tokenizer.pad_token_id) -1
+
+            for token_idx in range(idx_of_last_non_pad):  # skipping first because will be a fullstop
+                logits = pred[0][sentence_idx][token_idx]
+                softmax_vector = softmax(logits)
+
+                # Get probability that the next word in the sequence would be the word that it is
+                next_word_token_id = batch[sentence_idx, token_idx + 1]
+                next_word = self.tokenizer.decoder[batch[sentence_idx, token_idx + 1]]  # get next
+                next_word_prob = softmax_vector.numpy()[next_word_token_id]
+
+                combined_probs[next_word] = next_word_prob
+
+            # Calculate the probability for the entire sentence
+            sentence_prob = np.product(np.array(list(combined_probs.values())))
+            sentence_probs.append(sentence_prob)
+
+        return sentence_probs
+
+    def get_new_top_phrase(self, pred_words):
+
+        """
+        Return the new most likely phrase based on the top predictions for the latest word.
+
+        Here we use the beam algorithm
+
+        Parameters
+        ----------
+        pred_words: list[str]
+            list of the top n possible words predicted by the trace model
+
+        Returns
+        -------
+        new_phrase
+        """
+
+        phrases_to_query = [' '.join([existing_phrase, new_word])
+                                for existing_phrase, new_word in itertools.product(self.top_phrases_so_far, pred_words)]
+
+        phrase_probs = self.get_phrase_probabilities(phrases_to_query)
+
+        top_phrase_indices = np.argsort(np.array(phrase_probs))[-self.beam_width:][::-1]
+
+        self.top_phrases_so_far = [phrases_to_query[idx] for idx in top_phrase_indices]
+
+        return self.top_phrases_so_far[0].lstrip('. ')  # return just top phrase
 
 
 if __name__ == '__main__':
-
-    _sentences = ['hello, what is your favourite', 'hello, what is your favourite game', 'hello what is your favourite game to']
+    """ testing"""
+    _sentences = ['. Hello, what is your', '. Hello, what it your', '. Hello, what if your']
+    _next_words = ['favourite', 'only', 'the']
     model = GPT2()
-    _probs = model.predict_probabilities(_sentences)
+    model.beam_width = 3
+    model.top_phrases_so_far = _sentences
+    new_top_phrase = model.get_new_top_phrase(_next_words)
     print('stop here')
