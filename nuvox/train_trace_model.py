@@ -15,7 +15,8 @@ if __name__ == '__main__':
     keyboard = Keyboard()
     keyboard.build_keyboard(nuvox_standard_keyboard)
 
-    vocab = pickle_load(model_config.VOCAB_FILE)
+    #vocab = pickle_load(model_config.VOCAB_FILE)
+    vocab = ['hello', 'who', 'are', 'you', 'what', 'nice', 'weather']
 
     dataset = Dataset(keyboard)
     dataset.build_from_vocab(vocab)
