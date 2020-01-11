@@ -5,6 +5,7 @@ import random
 
 
 import numpy as np
+from tensorflow.keras.callbacks import Callback
 
 # noinspection PyUnresolvedReferences
 from tensorflow.keras.layers import Input, Masking, LSTM, Dense
@@ -125,7 +126,13 @@ class TraceModel:
                      ModelCheckpoint(filepath=self.config.TRAINING_MODEL_PATH,
                                      monitor=self.config.METRIC_TO_MONITOR,
                                      save_best_only=True,
-                                     save_weights_only=False)]
+                                     save_weights_only=False),
+                     SubModelCheckpoint(model=self.encoder_model,
+                                        filepath=self.config.ENCODER_PATH,
+                                        monitor=self.config.METRIC_TO_MONITOR),
+                     SubModelCheckpoint(model=self.decoder_model,
+                                        filepath=self.config.DECODER_PATH,
+                                        monitor=self.config.METRIC_TO_MONITOR)]
 
         self.training_model.fit_generator(batch_gen,
                                           steps_per_epoch=steps_per_epoch,
@@ -133,8 +140,8 @@ class TraceModel:
                                           callbacks=callbacks,
                                           verbose=1)
 
-        # TODO save again to ensure encoder and decoder are saved - need to find a way of saving all three models withiin ModelCheckpoint
-        self.save_model()  # call once before training to ensure keyboard and model config are saved
+        print('Training Complete')
+
 
     # def predict(self, trace, beam_width=5, min_return_confidence=0.1):
     #     """ predict word from trace (list of (x,y) coords)
@@ -329,6 +336,29 @@ class TraceModel:
                 decoder_target = np.zeros(shape=(batch_size, self.config.MAX_OUTPUT_LENGTH, self.config.OUTPUT_DIM))
 
             iteration += 1
+
+
+class SubModelCheckpoint(Callback):
+    """ Custom version of ModelCheckpoint to allow saving of encoder and decoder separatley"""
+    def __init__(self, model, filepath, monitor):
+        self.monitor = monitor
+        if 'acc' in monitor:
+            self.monitor_op = np.greater
+            self.best = 0
+        elif 'loss' in monitor:
+            self.monitor_op = np.less
+            self.best = np.Inf
+        else:
+            raise ValueError('Metric {} does not contain acc or loss'.format(monitor))
+
+        self.filepath = filepath
+        self.encoder = model
+
+    def on_epoch_end(self, epoch, logs=None):
+        current = logs.get(self.monitor)
+        if self.monitor_op(current, self.best):
+            self.best = current
+            self.model.save(self.filepath, overwrite=True)
 
 
 

@@ -11,13 +11,13 @@ class ModelConfig:
     START_OF_SEQ_TOKEN = 10
 
     # Training settings
-    EPOCHS = 5
-    STEPS_PER_EPOCH = 25
+    EPOCHS = 10000
+    STEPS_PER_EPOCH = 100
     EVAL_EPOCHS = 10
     BATCH_SIZE = 32
     SHUFFLE = True
     OPTIMIZER = 'adam'
-    MAX_SEQ_LEN = 100  # max length of trace
+    MAX_SEQ_LEN = 200  # max length of trace
 
     # Callbacks
     METRIC_TO_MONITOR = 'accuracy'
@@ -32,6 +32,7 @@ class ModelConfig:
 
     # path to vocab file from which the dataset is built - should be a .pkl file containing a python list
     VOCAB_FILE = '/home/luka/PycharmProjects/nuvox/models/trace_models/vocab.pkl'
+    MAX_WORD_LENGTH = 10  # words exceeding this length will be removed from vocabulary
 
     # Trace
     TRACE_MIN_SEPARATION = 0.05

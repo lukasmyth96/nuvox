@@ -15,8 +15,9 @@ if __name__ == '__main__':
     keyboard = Keyboard()
     keyboard.build_keyboard(nuvox_standard_keyboard)
 
-    #vocab = pickle_load(model_config.VOCAB_FILE)
-    vocab = ['hello', 'who', 'are', 'you', 'what', 'nice', 'weather']
+    vocab = pickle_load(model_config.VOCAB_FILE)
+    print('Removing words from vocab if they exceed length {}...'.format(model_config.MAX_WORD_LENGTH))
+    vocab = [word for word in vocab if len(word) <= model_config.MAX_WORD_LENGTH]
 
     dataset = Dataset(keyboard)
     dataset.build_from_vocab(vocab)
