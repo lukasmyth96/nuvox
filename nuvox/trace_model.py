@@ -142,7 +142,7 @@ class TraceModel:
 
         print('Training Complete')
 
-    def predict(self, trace, beam_width=3, min_return_confidence=0.5):
+    def predict(self, trace, beam_width=3, min_return_confidence=0.1):
         """ predict word from trace (list of (x,y) coords)
         Parameters
         ----------

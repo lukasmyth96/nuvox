@@ -33,7 +33,7 @@ class Display:
 
         self.trace_model = None
 
-        self.beam_width = 8
+        self.beam_width = 5
 
         self.language_model = GPT2()
         self.language_model.beam_width = self.beam_width
@@ -84,7 +84,8 @@ class Display:
                 obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.exit(), font=("Calibri 10"))
 
             elif key.type == 'display':
-                obj = Entry(self.gui, textvariable=self.display_variable, font=("Calibri 8"))
+                wrap_length = int(0.8 * (self.gui.winfo_width() * key.w))
+                obj = Label(self.gui, textvariable=self.display_variable, wraplength=wrap_length, justify='right', font=("Calibri 12"))
 
             else:
                 raise ValueError('Key type: {} not handled yet in build_display method'.format(key.type))
