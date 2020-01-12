@@ -142,86 +142,124 @@ class TraceModel:
 
         print('Training Complete')
 
+    def predict(self, trace, beam_width=3, min_return_confidence=0.5):
+        """ predict word from trace (list of (x,y) coords)
+        Parameters
+        ----------
+        trace: list[tuples]
+            list of (x,y) coordinates of trace
+        beam_width: int
+            the number of words to return
+        min_return_confidence: float
+            minimum confidence required in order to return a predicted word
 
-    # def predict(self, trace, beam_width=5, min_return_confidence=0.1):
-    #     """ predict word from trace (list of (x,y) coords)
-    #     Parameters
-    #     ----------
-    #     trace: list[tuples]
-    #         list of (x,y) coordinates of trace
-    #     beam_width: int
-    #         the number of words to return
-    #     min_return_confidence: float
-    #         minimum confidence required in order to return a predicted word
-    #
-    #     Returns:
-    #     --------
-    #     possible_words: list[str]
-    #         possible words to top n most likely paths
-    #     """
-    #
-    #     if self.config.TRACE_DIM == 3:
-    #         trace = add_gradients_to_trace(trace)
-    #
-    #     trace = np.array(trace)
-    #     batch = np.zeros(shape=(self.config.MAX_SEQ_LEN, self.config.TRACE_DIM))
-    #     batch[(self.config.MAX_SEQ_LEN - trace.shape[0]):] = trace
-    #     batch = np.expand_dims(batch, 0)  # add batch dim
-    #
-    #     # get trace encoding
-    #     state = self.encoder_model.predict(batch)
-    #
-    #     # maintain a list of top n sequences so far
-    #     top_sequences_so_far = [self.config.START_OF_SEQ_TOKEN] * beam_width
-    #
-    #     # get initial decoder_input
-    #     decoder_input = np.zeros(shape=(1, self.config.MAX_OUTPUT_LENGTH, self.config.OUTPUT_DIM))
-    #     decoder_input[0, 0] = to_categorical(self.config.START_OF_SEQ_TOKEN, num_classes=self.config.OUTPUT_DIM)
-    #
-    #     def get_new_top_sequences(top_sequences_so_far, current_state, time_step, beam_width):
-    #         """
-    #
-    #         Parameters
-    #         ----------
-    #         decoder_input
-    #         current_state
-    #         time_step
-    #         beam_width
-    #
-    #         Returns
-    #         -------
-    #
-    #         """
-    #         yhat, h, c = self.decoder_model.predict([decoder_input] + current_state)
-    #         for example_idx, pred in enumerate(yhat):
-    #             next_word_probs = pred[time_step]
-    #             top_n_indices = next_word_probs.argsort()[-beam_width:][::-1]
-    #             top_n_probs = [next_word_probs[idx] for idx in top_n_indices]
-    #
-    #         return top_n_indices, top_n_probs, [h, c]
-    #
-    #
-    #
-    #     for t in range(self.config.MAX_OUTPUT_LENGTH):
-    #         # predict next char
-    #         yhat, h, c = self.decoder_model.predict([decoder_input] + state)
-    #
-    #         # store prediction
-    #         pred_probas[t] = (yhat[0, t, :])
-    #
-    #         # update decoder intput
-    #         top_pred_idx = np.argmax(yhat[0, t])
-    #
-    #         if top_pred_idx == self.config.END_OF_SEQ_TOKEN:
-    #             break
-    #         else:
-    #             pred_tokens.append(top_pred_idx)
-    #             decoder_input[0, t+1] = to_categorical(top_pred_idx, num_classes=self.config.OUTPUT_DIM)
-    #
-    #         # update state for next time-step
-    #         state = [h, c]
-    #
-    #     return pred_tokens
+        Returns:
+        --------
+        possible_words: list[str]
+            possible words to top n most likely paths
+        """
+
+        if self.config.TRACE_DIM == 3:
+            trace = add_gradients_to_trace(trace)
+
+        trace = np.array(trace)
+        batch = np.zeros(shape=(self.config.MAX_SEQ_LEN, self.config.TRACE_DIM))
+        batch[(self.config.MAX_SEQ_LEN - trace.shape[0]):] = trace
+        batch = np.expand_dims(batch, 0)  # add batch dim
+
+        # get trace encoding
+        state = self.encoder_model.predict(batch)
+
+        final_sequences = []
+        final_probs = []
+
+        top_sequences_so_far = [[self.config.START_OF_SEQ_TOKEN]]
+        probs_so_far = [1]
+
+        for time_step in range(self.config.MAX_OUTPUT_LENGTH):
+
+            top_sequences_so_far, probs_so_far, state = \
+                self.get_new_top_sequences(top_sequences_so_far, probs_so_far, state, beam_width)
+
+            for seq, prob in zip(top_sequences_so_far, probs_so_far):
+                if seq[-1] == self.config.END_OF_SEQ_TOKEN:
+                    final_sequences.append(seq)
+                    final_probs.append(prob)
+                    top_sequences_so_far.remove(seq)  # TODO probably better to remove by index
+                    probs_so_far.remove(prob)
+
+                if len(final_sequences) == beam_width:
+                    break
+
+            if len(final_sequences) == beam_width:
+                break
+
+        if len(final_sequences) < beam_width:
+            num_required = beam_width - len(final_sequences)
+            final_sequences += top_sequences_so_far[:num_required]
+            final_probs += probs_so_far[:num_required]
+
+        assert len(final_sequences) == beam_width
+
+        # Remove predicted sequences if low than minimum prob
+        final_sequences = [seq for idx, seq in enumerate(final_sequences) if final_probs[idx] > min_return_confidence]
+        final_probs = [prob for prob in final_probs if prob > min_return_confidence]
+
+        # Strip leading start token and trailing end token from each sequence
+        for seq in final_sequences:
+            seq.pop()
+            seq.pop(0)
+
+        # Get a list of discrete representations
+        discrete_reprs = [''.join([str(token) for token in seq]) for seq in final_sequences]
+
+        # Get a list of all the possible words
+        possible_words = []
+        for discrete_repr in discrete_reprs:
+            possible_words += self.config.DISCRETE_REPR_TO_WORDS[discrete_repr]
+
+        return possible_words
+
+    def get_new_top_sequences(self, top_sequences_so_far, probs_so_far, current_state, beam_width):
+        """
+
+        Parameters
+        ----------
+        top_sequences_so_far: list[]
+            list of the top n=beam_width token sequences so far
+        probs_so_far: list[]
+            list of the joint probabilities for each sequence in top_sequences_so_far
+        current_state: list[np.ndarray]
+            [h, c]
+        beam_width: int
+            the number of potential sequence to keep at each iteration
+
+        Returns
+        -------
+
+        """
+
+        batch_size = beam_width
+        decoder_input = np.zeros(shape=(batch_size, 1, self.config.OUTPUT_DIM))
+        for idx, seq in enumerate(top_sequences_so_far):
+            last_token = seq[-1]
+            decoder_input[idx, 0] = to_categorical(last_token, num_classes=self.config.OUTPUT_DIM)
+
+        yhat, h, c = self.decoder_model.predict([decoder_input] + current_state)
+
+        # Loop through all combinations of current top sequences and next tokens, calculate their joint probabilities
+        #  and then keep the new top n=beam_width
+        yhat = np.squeeze(yhat, axis=1)  # remove redundent time index
+        yhat = yhat[:len(top_sequences_so_far)]  # ignore predictions for sequences that were all padded
+        joint_probability_matrix = np.array(probs_so_far)[:, None] * yhat  # [beam_width, output_dim]
+        top_indices_flattened = np.argsort(joint_probability_matrix.ravel())[-beam_width:][::-1]
+        top_indices_unraveled = [np.unravel_index(idx, shape=joint_probability_matrix.shape) for idx in
+                                 top_indices_flattened]
+
+        new_top_sequences = [top_sequences_so_far[i] + [j] for (i, j) in top_indices_unraveled]
+        new_probs_so_far = [probs_so_far[i] * yhat[i, j] for (i, j) in top_indices_unraveled]
+
+        return new_top_sequences, new_probs_so_far, [h, c]
 
     def evaluate(self, dataset):
 
@@ -254,9 +292,11 @@ class TraceModel:
         self.keyboard = pickle_load(os.path.join(model_dir, 'keyboard.pkl'))
 
         # not using CHECKPOINT_PATH only because I might rename the model dir
-        self.encoder_model = load_model(self.config.ENCODER_PATH)
-        self.decoder_model = load_model(self.config.DECODER_PATH)
-        self.training_model = load_model(self.config.TRAINING_MODEL_PATH)
+        trained_model = load_model(self.config.TRAINING_MODEL_PATH)
+        trained_weights = trained_model.get_weights()
+
+        self.build_keras_models()
+        self.training_model.set_weights(trained_weights)  # this will also set the weights of the encoder and decoder
 
     def set_log_dir(self):
 
@@ -365,7 +405,7 @@ class SubModelCheckpoint(Callback):
 if __name__ == '__main__':
     """ Testing predictions"""
 
-    model_dir = '/home/luka/PycharmProjects/nuvox/models/trace_models/11_01_2020_15_13_43'
+    model_dir = '/home/luka/PycharmProjects/nuvox/models/trace_models/11_01_2020_16_57_43'
     model = TraceModel()
     model.load_model(model_dir)
     word = 'hello'

@@ -30,9 +30,9 @@ class Display:
         self.display_width = display_width
         self.display_height = display_height
 
-        self.prediction_model = None
+        self.trace_model = None
 
-        self.beam_width = 6
+        self.beam_width = 5
 
         self.language_model = GPT2()
         self.language_model.beam_width = self.beam_width
@@ -95,14 +95,15 @@ class Display:
         """ run prediction on trace currently held in buffer and add predicted text to the displayed text"""
         mouse_trace = self.mouse_trace_buffer.copy()
         mouse_trace.reverse()  # to put list in chronological order
-        predicted_words = self.prediction_model.predict(mouse_trace, top_n=self.beam_width)
+
+        possible_words = self.trace_model.predict(mouse_trace, top_n=self.beam_width)
 
         # Capitalize first word in new sentence TODO should also check if last char is . or ? or !
         if self.display_variable.get() == "":
-            predicted_words = [word.capitalize() for word in predicted_words]
+            possible_words = [word.capitalize() for word in possible_words]
 
         # Use language model to predict new top phrase
-        new_top_phrase = self.language_model.get_new_top_phrase(predicted_words)
+        new_top_phrase = self.language_model.get_new_top_phrase(possible_words)
 
         self.display_variable.set(new_top_phrase)
 
@@ -127,7 +128,6 @@ class Display:
 
         self.language_model.manually_add_word(text_to_add)
         self.display_variable.set(self.language_model.get_current_top_phrase())
-
 
     def press_delete(self):
         """
@@ -191,7 +191,7 @@ class Display:
 
                     print('x={:.2f}, y={:.2f}'.format(relx, rely))
 
-    def set_prediction_model(self, model):
+    def set_trace_model(self, model):
         """
         Set prediction model - carry out some checks on the model
         Parameters
@@ -207,9 +207,9 @@ class Display:
         if model.config is None:
             raise (ValueError('model config must be set before predictions can be made'))
 
-        self.prediction_model = model
+        self.trace_model = model
 
-        print('Available vocab words are: \n\n {}'.format(self.prediction_model.config.VOCAB))
+        print('Available vocab words are: \n\n {}'.format(self.trace_model.config.VOCAB))
 
     def plot_trace(self, trace):
         """ plot trace
@@ -260,10 +260,10 @@ if __name__ == "__main__":
     _keyboard.build_keyboard(nuvox_standard_keyboard)
 
     _model = TraceModel()
-    _model.load_model('../models/trace_models/02_01_2020_17_30_42_top2500_078acc')
+    _model.load_model('/home/luka/PycharmProjects/nuvox/models/trace_models/11_01_2020_16_57_43')
 
     _display = Display(_keyboard, display_width=900, display_height=1200)
-    _display.set_prediction_model(_model)
+    _display.set_trace_model(_model)
     _display.start_display()
 
 
