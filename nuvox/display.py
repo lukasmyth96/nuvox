@@ -8,6 +8,7 @@ import numpy as np
 import nuvox
 from nuvox.trace_model import TraceModel
 from nuvox.language_model import GPT2
+from nuvox.utils.text_to_speech import speak_text
 
 
 class Display:
@@ -65,6 +66,10 @@ class Display:
                 text = ' '.join(key.contents).upper()
                 callback = lambda id: lambda: self.press_key(id)
                 obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=callback(key.key_id), font=("Calibri 18"))
+
+            elif key.type == 'speak_button':
+                text = ' '.join(key.contents).upper()
+                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.press_speak(), font=("Calibri 10"))
 
             elif key.type == 'delete_button':
                 text = ' '.join(key.contents).upper()
@@ -135,6 +140,14 @@ class Display:
 
         self.language_model.manually_add_word(text_to_add)
         self.display_variable.set(self.language_model.get_current_top_phrase())
+
+    def press_speak(self):
+        """
+        Speak text on display
+        """
+        display_text = self.display_variable.get()
+        display_text.lstrip('. ')
+        speak_text(text=display_text)
 
     def press_delete(self):
         """

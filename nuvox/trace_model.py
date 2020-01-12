@@ -13,7 +13,7 @@ from tensorflow.keras.models import Sequential, load_model, Model
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 
-from nuvox.traces import get_random_trace, add_gradients_to_trace
+from nuvox.trace_builder import get_random_trace, add_gradients_to_trace
 from nuvox.utils.common import pickle_save, pickle_load
 
 

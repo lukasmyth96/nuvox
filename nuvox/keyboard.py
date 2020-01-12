@@ -5,7 +5,7 @@ import numpy as np
 
 from nuvox.config.keyboard_config import required_key_attributes, nuvox_standard_keyboard
 from nuvox.utils.intersection_over_union import get_iou
-from nuvox.traces import get_random_trace
+from nuvox.trace_builder import get_random_trace
 
 
 class Keyboard:
