@@ -38,7 +38,7 @@ def speak_text(text):
     audio_path = text_to_audio_file(text)
 
     mp3 = MP3(audio_path)
-    pygame.mixer.init(frequency=int(1.1 * mp3.info.sample_rate))  # speeding up audio slightly
+    pygame.mixer.init(frequency=int(1 * mp3.info.sample_rate))  # speeding up audio slightly
 
     pygame.mixer.init()
     pygame.mixer.music.load(audio_path)

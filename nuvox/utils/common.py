@@ -4,6 +4,9 @@ import json
 import logging
 import os
 import pickle
+import re
+
+from PIL import ImageFont
 
 
 def pickle_save(filename, an_object):
@@ -43,6 +46,34 @@ def write_text_file(file_path, a_string):
 def write_json_file(file_path, data_dict):
     with open(file_path, 'w', encoding='utf-8') as json_file:
         json.dump(data_dict, json_file, ensure_ascii=False, sort_keys=True, indent=4)
+
+
+def add_line_breaks(text, char_lim=50):
+    """ Insert new line every char_lim number of characters"""
+    new_text = ''
+    for word in text.split(' '):
+        potential_new_text = ' '.join([new_text, word])
+
+        if '\n' in potential_new_text:
+            chars_since_last_line_break = len(potential_new_text[potential_new_text.rfind('\n'):])
+        else:
+            chars_since_last_line_break = len(potential_new_text)
+
+        if chars_since_last_line_break > char_lim:
+            new_text = ' '.join([new_text, '\n{}'.format(word)])
+        else:
+            new_text = potential_new_text
+
+    new_text = new_text.lstrip(' ')
+
+    return new_text
+
+
+def strip_new_lines(text):
+    """ Strip all new lines from text"""
+    new_text = re.sub("\n", '', text)
+    new_text = re.sub(" +", ' ', new_text)
+    return new_text
 
 
 def initialise_logger(log_file_path=None):

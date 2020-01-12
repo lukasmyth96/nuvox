@@ -9,6 +9,7 @@ import nuvox
 from nuvox.trace_model import TraceModel
 from nuvox.language_model import GPT2
 from nuvox.utils.text_to_speech import speak_text
+from nuvox.utils.common import add_line_breaks, strip_new_lines
 
 
 class Display:
@@ -84,8 +85,7 @@ class Display:
                 obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.exit(), font=("Calibri 10"))
 
             elif key.type == 'display':
-                wrap_length = int(0.8 * (self.gui.winfo_width() * key.w))
-                obj = Label(self.gui, textvariable=self.display_variable, wraplength=wrap_length, justify='right', font=("Calibri 12"))
+                obj = Label(self.gui, textvariable=self.display_variable, justify=LEFT, anchor=NW, font=("Calibri 12"))
 
             else:
                 raise ValueError('Key type: {} not handled yet in build_display method'.format(key.type))
@@ -111,20 +111,20 @@ class Display:
         print('top 10 possible words are: ', possible_words)
 
         # Capitalize first word in new sentence TODO should also check if last char is . or ? or !
-        current_text = self.display_variable.get()
+        current_text = self._get_display_text()
         if current_text == "" or current_text[-1] in ['.', '!', '?']:
             possible_words = [word.capitalize() for word in possible_words]
 
         # Use language model to predict new top phrase
         new_top_phrase = self.language_model.get_new_top_phrase(possible_words)
 
-        self.display_variable.set(new_top_phrase)
+        self._set_display_text(new_top_phrase)
 
     def press_key(self, key_id):
         """ method for updating display text when key is pressed"""
 
         # TODO remove hard coding here
-        display_text = self.display_variable.get()
+        display_text = self._get_display_text()
 
         if key_id == '1':
             text_to_add = 'A' if not display_text else 'a'
@@ -140,7 +140,7 @@ class Display:
             text_to_add = ''
 
         self.language_model.manually_add_word(text_to_add)
-        self.display_variable.set(self.language_model.get_current_top_phrase())
+        self._set_display_text(self.language_model.get_current_top_phrase())
 
     def press_speak(self):
         """
@@ -154,17 +154,17 @@ class Display:
         """
         Delete last word on display
         """
-        current_display_text = self.display_variable.get()
+        current_display_text = self._get_display_text()
         words = current_display_text.split(' ')
         new_words = words[:-1]
         new_display_text = ' '.join(new_words)
-        self.display_variable.set(new_display_text)
+        self._set_display_text(new_display_text)
 
         self.language_model.delete_last_word()
 
     def clear_display(self):
         """ clear display text and trace buffer"""
-        self.display_variable.set("")
+        self._set_display_text("")
         self.clear_trace()
         self.language_model.reset()
 
@@ -264,6 +264,15 @@ class Display:
         obj.place(relx=x, rely=y, relwidth=0.01, relheight=0.01)
         self.trace_labels.append(obj)
         self.gui.update()
+
+    def _get_display_text(self):
+        """ Get display text but remove new line chars"""
+        return strip_new_lines(self.display_variable.get())
+
+    def _set_display_text(self, text):
+        """ Set display text but insert line breaks """
+        # TODO need to find a beetter way to determine when the line is full
+        self.display_variable.set(add_line_breaks(text=text, char_lim=44))
 
 
 def rgb_to_hex(rgb):
