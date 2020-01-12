@@ -216,7 +216,9 @@ class TraceModel:
         # Get a list of all the possible words
         possible_words = []
         for discrete_repr in discrete_reprs:
-            possible_words += self.config.DISCRETE_REPR_TO_WORDS[discrete_repr]
+            matching_words = self.config.DISCRETE_REPR_TO_WORDS.get(discrete_repr)
+            if matching_words is not None:
+                possible_words += matching_words
 
         return possible_words
 
