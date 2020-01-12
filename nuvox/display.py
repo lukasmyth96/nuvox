@@ -32,7 +32,7 @@ class Display:
 
         self.trace_model = None
 
-        self.beam_width = 5
+        self.beam_width = 8
 
         self.language_model = GPT2()
         self.language_model.beam_width = self.beam_width
@@ -96,10 +96,17 @@ class Display:
         mouse_trace = self.mouse_trace_buffer.copy()
         mouse_trace.reverse()  # to put list in chronological order
 
-        possible_words = self.trace_model.predict(mouse_trace, top_n=self.beam_width)
+        possible_words = self.trace_model.predict(mouse_trace, beam_width=self.beam_width)
+        if not possible_words:
+            print('Trace model returned no possible words - try again')
+            return False
+
+        possible_words = possible_words[:self.beam_width]  # TODO currently just limiting the numbere of words that the language model can predict on
+        print('top 10 possible words are: ', possible_words)
 
         # Capitalize first word in new sentence TODO should also check if last char is . or ? or !
-        if self.display_variable.get() == "":
+        current_text = self.display_variable.get()
+        if current_text == "" or current_text[-1] in ['.', '!', '?']:
             possible_words = [word.capitalize() for word in possible_words]
 
         # Use language model to predict new top phrase

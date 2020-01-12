@@ -24,7 +24,7 @@ class GPT2:
         self.tokenizer.decoder[self.tokenizer.pad_token_id] = self.tokenizer.pad_token
 
         self.beam_width = 10
-        self.top_phrases_so_far = ["."] * self.beam_width  # list to store current most likely phrases in beam search
+        self.top_phrases_so_far = ["."]   # list to store current most likely phrases in beam search
 
     def _encode(self, text):
         """ encode single string of text"""
@@ -52,7 +52,7 @@ class GPT2:
             token_ids = self._encode(sentence)
             batch[idx] = token_ids
 
-        pred = self.keras_model.predict_on_batch(batch)
+        pred = self.keras_model.predict(batch, batch_size=32)
 
         sentence_probs = []
 
@@ -109,6 +109,7 @@ class GPT2:
         top_phrase_indices = np.argsort(np.array(phrase_probs))[-self.beam_width:][::-1]
 
         self.top_phrases_so_far = [phrases_to_query[idx] for idx in top_phrase_indices]
+        print('Top phrases so far: ', self.top_phrases_so_far)
 
         return self.top_phrases_so_far[0].lstrip('. ')  # return just top phrase
 
@@ -127,7 +128,7 @@ class GPT2:
 
     def reset(self):
         """ Reset top phrases - called when clear button is called from display"""
-        self.top_phrases_so_far = ['.'] * self.beam_width
+        self.top_phrases_so_far = ['.']
 
     def delete_last_word(self):
         """ Delete last word from all top phrases - called when del button is pressed on display"""
