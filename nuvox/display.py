@@ -40,7 +40,7 @@ class Display:
         self.language_model.beam_width = self.beam_width
 
         self.gui = Tk()
-        self.gui.configure(background="light green")
+        self.gui.configure(background="steel blue")
         self.gui.title("nuvox keyboard")
         self.gui.geometry("{}x{}".format(self.display_width, self.display_height))
         self.gui.resizable(width=False, height=False)
@@ -123,23 +123,21 @@ class Display:
     def press_key(self, key_id):
         """ method for updating display text when key is pressed"""
 
-        # TODO remove hard coding here
-        display_text = self._get_display_text()
-
-        if key_id == '1':
-            text_to_add = 'A' if not display_text else 'a'
-        elif key_id == '3':
-            text_to_add = 'I'
-        elif key_id == '10':
-            text_to_add = ','
-        elif key_id == '11':
-            text_to_add = '.'
-        elif key_id == '12':
-            text_to_add = '?'
+        key_contents = self.keyboard.key_id_to_contents[key_id]
+        if len(key_contents) == 1:
+            text_to_add = key_contents[0]
         else:
-            text_to_add = ''
+            if 'i' in key_contents:
+                text_to_add = ' I'
+            elif 'a' in key_contents:
+                if self._get_display_text() == '':
+                    text_to_add = ' A'
+                else:
+                    text_to_add = ' a'
+            else:
+                return
 
-        self.language_model.manually_add_word(text_to_add)
+        self.language_model.manually_add_text(text_to_add)
         self._set_display_text(self.language_model.get_current_top_phrase())
 
     def press_speak(self):
@@ -261,7 +259,7 @@ class Display:
         assert 0 <= x <= 1
         assert 0 <= y <= 1
         obj = Label(self.gui, text='', bg=colour)  # all same colour for now
-        obj.place(relx=x, rely=y, relwidth=0.01, relheight=0.01)
+        obj.place(relx=x, rely=y, width=10, height=10)
         self.trace_labels.append(obj)
         self.gui.update()
 
@@ -283,16 +281,16 @@ def rgb_to_hex(rgb):
 
 if __name__ == "__main__":
     """ Testing"""
-    from nuvox.config.keyboard_config import nuvox_standard_keyboard
+    from nuvox.config.keyboard_config import nuvox_standard_keyboard, nuvox_qwerty_keyboard
     from nuvox.keyboard import Keyboard
 
     _keyboard = Keyboard()
-    _keyboard.build_keyboard(nuvox_standard_keyboard)
+    _keyboard.build_keyboard(nuvox_qwerty_keyboard)
 
     _model = TraceModel()
     _model.load_model('/home/luka/PycharmProjects/nuvox/models/trace_models/11_01_2020_16_57_43')
 
-    _display = Display(_keyboard, display_width=900, display_height=1200)
+    _display = Display(_keyboard, display_width=1600, display_height=800)
     _display.set_trace_model(_model)
     _display.start_display()
 

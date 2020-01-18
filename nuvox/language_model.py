@@ -113,17 +113,13 @@ class GPT2:
 
         return self.top_phrases_so_far[0].lstrip('. ')  # return just top phrase
 
-    def manually_add_word(self, word):
-        """ manually add a single word to all of the current top phrases
-        this is used for example when , . ? or a i are pressed on the display
+    def manually_add_text(self, text_to_add):
+        """ manually add a text to all of the current top phrases -
         """
         current_top_phrases = self.top_phrases_so_far
         self.top_phrases_so_far = []
         for phrase in current_top_phrases:
-            if word in string.punctuation:
-                phrase += word
-            else:
-                phrase += ' {}'.format(word)
+            phrase += text_to_add
             self.top_phrases_so_far.append(phrase)
 
     def reset(self):
