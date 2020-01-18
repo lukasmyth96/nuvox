@@ -134,11 +134,13 @@ class GPT2:
         """ Delete last word from all top phrases - called when del button is pressed on display"""
 
         current_top_phrases = self.top_phrases_so_far
-        self.top_phrases_so_far = []
+        new_top_phrases = []
         for phrase in current_top_phrases:
             words = phrase.split(' ')
             new_phrase = ' '.join(words[:-1])
-            self.top_phrases_so_far.append(new_phrase)
+            new_top_phrases.append(new_phrase)
+        self.top_phrases_so_far = list(set(new_top_phrases))
+        print('Top phrases after deleting word: {}'.format(self.top_phrases_so_far))
 
 
 if __name__ == '__main__':
