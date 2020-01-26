@@ -68,6 +68,41 @@ class Keyboard:
         for char in key.contents:
             self.char_to_key.update({char: key})
 
+    def get_key_ids_at_point(self, x, y):
+        """
+        Return list of key_ids at a given point - can contain multiple points if x, y is right on border between keys
+        Parameters
+        ----------
+        x: float
+            relative x coord
+        y: float
+            relative y coord
+
+        Returns
+        -------
+        matching_keys_list: list[str]
+            list of key_ids
+
+        Raises
+        ------
+        ValueError
+            when x or y coordinate is out of [0, 1] range
+            when no key is found at point
+        """
+        if x < 0 or x > 1 or y < 0 or y > 1:
+            raise ValueError('x or y coordinates out of [0,1] bounds')
+
+        def is_point_within_key(x, y, key):
+            return (key.x1 <= x <= key.x2) and (key.y1 <= y <= key.y2)
+
+        matching_keys_list = [key.key_id for key in self.keys if is_point_within_key(x, y, key)]
+
+        if matching_keys_list:
+            return matching_keys_list
+        elif not matching_keys_list:
+            raise ValueError('Found no key at point ({:.1f}, {:.1f})'.format(x, y))
+
+
     def get_discrete_representation(self, text, skip_spacekey=True):
         """ Get the discrete representation of the trace for a given text, that is a list containing the key_id's
         for the sequence of keys that must be traversed for the given text

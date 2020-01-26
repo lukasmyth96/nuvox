@@ -407,7 +407,7 @@ class SubModelCheckpoint(Callback):
 if __name__ == '__main__':
     """ Testing predictions"""
 
-    model_dir = '/home/luka/PycharmProjects/nuvox/models/trace_models/11_01_2020_16_57_43'
+    model_dir = '/models/trace_models/11_01_2020_16_57_43_nuvox_standard_keyboard'
     model = TraceModel()
     model.load_model(model_dir)
     word = 'hello'
