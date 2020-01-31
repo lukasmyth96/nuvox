@@ -13,6 +13,7 @@ from nuvox.trace_model import TraceModel
 from nuvox.language_model import GPT2
 from nuvox.utils.text_to_speech import speak_text
 from nuvox.utils.common import add_line_breaks, strip_new_lines
+from nuvox.timer_thread import MyTimer
 
 
 class Display:
@@ -49,9 +50,9 @@ class Display:
         self.gui.resizable(width=False, height=False)
 
         # TODO build new want of selecting keys with hover:
-        self.keys_in_focus_queue = queue.Queue(maxsize=10)
         self.current_key_in_focus = None  # track the id of the key currently in focus
-        self.required_time_in_focus = 2000  # number of ms a key has to be hovered on before record_mouse_trace is toggled
+        self.required_time_in_focus = 5  # number of ms a key has to be hovered on before record_mouse_trace is toggled
+        self.timer = MyTimer(self.required_time_in_focus, self.on_single_key_in_focus_for_required_time, self.on_every_second_a_key_is_in_focus)
         self.record_mouse_trace = False  # Flag to keep track of whether mouse movements should be recorded currently
 
         self.left_mouse_down = False
@@ -99,8 +100,6 @@ class Display:
             else:
                 raise ValueError('Key type: {} not handled yet in build_display method'.format(key.type))
 
-            # Bind every key to a callback that keeps track of how long an individual key has been in focus for and
-            # toggles whether the mouse trace is being recorded or not
             obj.bind('<Enter>', self.change_key_in_focus)
 
             obj.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
@@ -109,13 +108,6 @@ class Display:
     def start_display(self):
         """ Start display"""
 
-        def start_timer_loop():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.create_task(self.update_keys_in_focus_queue_loop())
-            loop.run_forever()
-
-        threading.Thread(target=start_timer_loop).start()
         self.gui.mainloop()
 
     def predict_on_trace(self):
@@ -210,21 +202,30 @@ class Display:
         rely = (self.gui.winfo_pointery() - self.gui.winfo_y()) / self.gui.winfo_height()
         keys_in_focus = self.keyboard.get_key_ids_at_point(relx, rely)
 
-        if current_key_in_focus in keys_in_focus:
+        if not keys_in_focus:
+            new_key_in_focus = None
+        elif len(keys_in_focus) == 1:
+            new_key_in_focus = keys_in_focus[0]
+        elif len(keys_in_focus) == 2:
             keys_in_focus.remove(current_key_in_focus)  # happens when mouse position is right on border of two keys
-        assert len(keys_in_focus) == 1  # should only be one key in focus now
+            new_key_in_focus = keys_in_focus[0]
+        else:
+            raise Exception('Found three keys at position ({:.1f}, {:.1f})'.format(relx, rely))
 
-        new_key_in_focus = keys_in_focus[0]
-        print('New key in focus is {}'.format(new_key_in_focus))
+        print('New key in focus is {} - restarting timer'.format(new_key_in_focus))
+
+        self.timer.cancel()
+        self.timer = MyTimer(self.required_time_in_focus, self.on_single_key_in_focus_for_required_time, self.on_every_second_a_key_is_in_focus)
+        self.timer.start()
+
         self.current_key_in_focus = new_key_in_focus
 
-    async def update_keys_in_focus_queue_loop(self):
-        while True:
-            current_key_in_focus = await self.current_key_in_focus
-            print('Current key in focus is {}'.format(current_key_in_focus))
-            self.keys_in_focus_queue.put(current_key_in_focus)
-            await asyncio.sleep(0.1)
+    def on_single_key_in_focus_for_required_time(self):
+        print('record_mouse_trace changing from {}'.format(self.record_mouse_trace))
+        self.record_mouse_trace = not self.record_mouse_trace
 
+    def on_every_second_a_key_is_in_focus(self, seconds_passed):
+        print('{} seconds passed'.format(seconds_passed))
 
     def b1_down(self, event):
         """press down left mouse button"""

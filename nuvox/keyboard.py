@@ -82,15 +82,9 @@ class Keyboard:
         -------
         matching_keys_list: list[str]
             list of key_ids
-
-        Raises
-        ------
-        ValueError
-            when x or y coordinate is out of [0, 1] range
-            when no key is found at point
         """
         if x < 0 or x > 1 or y < 0 or y > 1:
-            raise ValueError('x or y coordinates out of [0,1] bounds')
+            return []
 
         def is_point_within_key(x, y, key):
             return (key.x1 <= x <= key.x2) and (key.y1 <= y <= key.y2)
