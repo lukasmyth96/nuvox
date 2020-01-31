@@ -2,16 +2,18 @@ from threading import Timer, Lock
 
 
 class MyTimer():
-    def __init__(self, timeout_secs, completion_callback, periodic_callback):
+    def __init__(self, timeout_secs, interval_secs, completion_callback, periodic_callback):
+
+        self.timeout_secs = timeout_secs
+        self.interval_secs = interval_secs
+        self.seconds_passed = 0
 
         self.main_thread = Timer(timeout_secs, self.end)
         self.main_timer_running = False
         self.completion_callback = completion_callback
 
         self.periodic_timer_running = False
-        self.timeout_secs = timeout_secs
         self.interval_callback = periodic_callback
-        self.seconds_passed = 0
 
         self.lock = Lock()
 
@@ -37,12 +39,12 @@ class MyTimer():
         self.lock.acquire()
         if self.main_timer_running:
             if self.periodic_timer_running:
-                self.seconds_passed += 1
+                self.seconds_passed += self.interval_secs
                 self.interval_callback(self.seconds_passed)
             else:
                 self.periodic_timer_running = True
 
-            periodic_timer = Timer(1, self.run_periodic_timer)
+            periodic_timer = Timer(self.interval_secs, self.run_periodic_timer)
             periodic_timer.start()
 
         self.lock.release()

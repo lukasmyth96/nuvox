@@ -51,19 +51,27 @@ class Display:
 
         # TODO build new want of selecting keys with hover:
         self.current_key_in_focus = None  # track the id of the key currently in focus
-        self.required_time_in_focus = 5  # number of ms a key has to be hovered on before record_mouse_trace is toggled
-        self.timer = MyTimer(self.required_time_in_focus, self.on_single_key_in_focus_for_required_time, self.on_every_second_a_key_is_in_focus)
+        self.required_time_in_focus = 2  # number of ms a key has to be hovered on before record_mouse_trace is toggled
+        self.interval_secs = 0.2
+        self.timer = MyTimer(self.required_time_in_focus, self.interval_secs,
+                             self.on_single_key_in_focus_for_required_time,
+                             self.on_every_second_a_key_is_in_focus)
         self.record_mouse_trace = False  # Flag to keep track of whether mouse movements should be recorded currently
+
+        # Controlling colours of keys
+        self.default_fg = (0, 0, 0)
+        self.initial_bg = (0, 255, 255)
+        self.final_bg = (0, 64, 255)
+        number_colour_increments = int(self.required_time_in_focus / self.interval_secs)
+        self.rgb_increment = tuple([int(val) for val in ((np.array(self.final_bg) - np.array(self.initial_bg)) / number_colour_increments)])
 
         self.left_mouse_down = False
         self.gui.bind('<Motion>', self.record_mouse_position)
-        self.gui.bind('<Button-1>', self.b1_down)
-        self.gui.bind('<ButtonRelease-1>', self.release_b1)
 
         self.display_variable = StringVar()
 
         # dict mapping key_id to TK object
-        self.key_list = []
+        self.key_id_to_widget = {}
 
         self.mouse_trace_buffer = deque(maxlen=200)  # store coordinates of mouse in buffer of fixed length
         self.trace_labels = []  # store label objects for trace
@@ -76,23 +84,28 @@ class Display:
             if key.type == 'button':
                 text = ' '.join(key.contents).upper()
                 click_callback = lambda id: lambda: self.press_key(id)
-                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=click_callback(key.key_id), font=("Calibri 18"))
+                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
+                             activebackground=rgb_to_hex(self.initial_bg), command=click_callback(key.key_id), font=("Calibri 18"))
 
             elif key.type == 'speak_button':
                 text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.press_speak(), font=("Calibri 10"))
+                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
+                             activebackground=rgb_to_hex(self.initial_bg), command=lambda: self.press_speak(), font=("Calibri 10"))
 
             elif key.type == 'delete_button':
                 text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.press_delete(), font=("Calibri 10"))
+                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
+                             activebackground=rgb_to_hex(self.initial_bg), command=lambda: self.press_delete(), font=("Calibri 10"))
 
             elif key.type == 'clear_button':
                 text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.clear_display(), font=("Calibri 10"))
+                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
+                             activebackground=rgb_to_hex(self.initial_bg), command=lambda: self.clear_display(), font=("Calibri 10"))
 
             elif key.type == 'exit_button':
                 text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg='black', bg='steel blue', command=lambda: self.exit(), font=("Calibri 10"))
+                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
+                             activebackground=rgb_to_hex(self.initial_bg), command=lambda: self.exit(), font=("Calibri 10"))
 
             elif key.type == 'display':
                 obj = Label(self.gui, textvariable=self.display_variable, justify=LEFT, anchor=NW, font=("Calibri 12"))
@@ -103,7 +116,7 @@ class Display:
             obj.bind('<Enter>', self.change_key_in_focus)
 
             obj.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
-            self.key_list.append(obj)
+            self.key_id_to_widget[key.key_id] = obj
 
     def start_display(self):
         """ Start display"""
@@ -188,6 +201,7 @@ class Display:
         self.mouse_trace_buffer.clear()
 
     def exit(self):
+        self.timer.cancel()
         self.gui.destroy()
 
     def change_key_in_focus(self, event):
@@ -197,7 +211,12 @@ class Display:
 
         current_key_in_focus = self.current_key_in_focus
 
-        # # NOTE - the following will not work in debug if the mouse moves at all
+        # Reset the colour to default as we have left that key now
+        if current_key_in_focus is not None:
+            current_widget = self.key_id_to_widget[current_key_in_focus]
+            current_widget.configure(bg=rgb_to_hex(self.initial_bg), activebackground=rgb_to_hex(self.initial_bg))
+
+        # FIXME - the following will not work in debug if the mouse moves at all
         relx = (self.gui.winfo_pointerx() - self.gui.winfo_x()) / self.gui.winfo_width()
         rely = (self.gui.winfo_pointery() - self.gui.winfo_y()) / self.gui.winfo_height()
         keys_in_focus = self.keyboard.get_key_ids_at_point(relx, rely)
@@ -215,30 +234,33 @@ class Display:
         print('New key in focus is {} - restarting timer'.format(new_key_in_focus))
 
         self.timer.cancel()
-        self.timer = MyTimer(self.required_time_in_focus, self.on_single_key_in_focus_for_required_time, self.on_every_second_a_key_is_in_focus)
+        self.timer = MyTimer(self.required_time_in_focus, self.interval_secs,
+                             self.on_single_key_in_focus_for_required_time,
+                             self.on_every_second_a_key_is_in_focus)
         self.timer.start()
 
         self.current_key_in_focus = new_key_in_focus
 
     def on_single_key_in_focus_for_required_time(self):
         print('record_mouse_trace changing from {}'.format(self.record_mouse_trace))
+        if self.record_mouse_trace:
+            if self.mouse_trace_buffer:
+                self.predict_on_trace()  # this function calls the prediction
+                self.clear_trace()  # clear trace ready for next word
+
         self.record_mouse_trace = not self.record_mouse_trace
 
     def on_every_second_a_key_is_in_focus(self, seconds_passed):
+
+        # Change colour value of key in focus
+        widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
+        if seconds_passed == self.required_time_in_focus:
+            new_hex = rgb_to_hex(self.initial_bg)
+        else:
+            current_hex = widget_in_focus.cget('bg')
+            new_hex = rgb_to_hex(tuple(np.array(hex_to_rgb(current_hex)) + np.array(self.rgb_increment)))
+        widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
         print('{} seconds passed'.format(seconds_passed))
-
-    def b1_down(self, event):
-        """press down left mouse button"""
-        self.left_mouse_down = True
-
-    def release_b1(self, event):
-        """ release left click"""
-        self.left_mouse_down = False
-
-        # Automatically predict on trace and then call clear to reset buffer
-        if self.mouse_trace_buffer:
-            self.predict_on_trace()  # this function calls the prediction
-            self.clear_trace()  # clear trace ready for next work
 
     def record_mouse_position(self, event):
         """Record mouse trace when flag is set to True"""
@@ -306,12 +328,11 @@ class Display:
             colour name of hex string
         """
 
-        assert 0 <= x <= 1
-        assert 0 <= y <= 1
-        obj = Label(self.gui, text='', bg=colour)  # all same colour for now
-        obj.place(relx=x, rely=y, width=10, height=10)
-        self.trace_labels.append(obj)
-        self.gui.update()
+        if (0 <= x <= 1) and (0 <= y <= 1):
+            obj = Label(self.gui, text='', bg=colour)  # all same colour for now
+            obj.place(relx=x, rely=y, width=10, height=10)
+            self.trace_labels.append(obj)
+            self.gui.update()
 
     def _get_display_text(self):
         """ Get display text but remove new line chars"""
@@ -327,6 +348,13 @@ def rgb_to_hex(rgb):
     """translates an rgb tuple of int to a tkinter friendly color code
     """
     return "#%02x%02x%02x" % rgb
+
+
+def hex_to_rgb(hex):
+    """ Converts hex string to rgb tuple"""
+    h = hex.lstrip('#')
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
 
 
 if __name__ == "__main__":
