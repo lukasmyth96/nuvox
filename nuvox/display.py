@@ -111,8 +111,9 @@ class Display:
                 display_frame = Frame(self.gui)
                 display_frame.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
                 for idx in range(self.beam_width):
+                    selection_callback = lambda idx: lambda: self.pick_from_prediction_list(idx)
                     obj = Button(display_frame, text=''.format(idx), font=("Calibri 10"), anchor=W,
-                                 command=lambda: self.pick_from_prediction_list(idx_of_selected_phrase=idx),
+                                 command=selection_callback(idx),
                                  fg=rgb_to_hex(self.default_fg),
                                  bg=rgb_to_hex(self.initial_bg),
                                  activebackground=rgb_to_hex(self.initial_bg)
@@ -183,7 +184,7 @@ class Display:
         """
         Delete last word on display
         """
-        current_phrases = self._get_current_display_phrases()
+        current_phrases = [phrase for phrase in self._get_current_display_phrases() if phrase != '']
         updated_phrases = []
         for current_phrase in current_phrases:
             words = current_phrase.split(' ')
@@ -276,6 +277,8 @@ class Display:
     def on_single_key_in_focus_for_required_time(self):
         print('record_mouse_trace changing from {}'.format(self.record_mouse_trace))
 
+        current_key_in_focus = self.current_key_in_focus  # define here in case it changes
+
         # If mouse trace is currently being recorded then stop the trace, predict the intended word and then clear the trace
         if self.record_mouse_trace:
             SFX().button_click_sfx_in_new_thread(type='unselect')  # play button unselect sound in new thread
@@ -292,7 +295,7 @@ class Display:
 
             # If key in focus is a non-text key then we execute that buttons command but do NOT start trace recorded
             if key_object_in_focus.type in ['speak_button', 'delete_button', 'clear_button', 'exit_button', 'display_frame']:
-                widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
+                widget_in_focus = self.key_id_to_widget[current_key_in_focus]
                 widget_in_focus.invoke()  # trigger click on this button
             else:
                 self.record_mouse_trace = True
