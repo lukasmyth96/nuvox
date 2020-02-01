@@ -84,7 +84,7 @@ class GPT2:
         """ return current top phrase"""
         return self.top_phrases_so_far[0].lstrip('. ')
 
-    def get_new_top_phrase(self, pred_words):
+    def get_new_top_phrases(self, pred_words):
 
         """
         Return the new most likely phrase based on the top predictions for the latest word.
@@ -98,7 +98,9 @@ class GPT2:
 
         Returns
         -------
-        new_phrase
+        top_phrases: list[str]
+            list of top n=beam_width phrases
+
         """
 
         phrases_to_query = [' '.join([existing_phrase, new_word])
@@ -109,9 +111,12 @@ class GPT2:
         top_phrase_indices = np.argsort(np.array(phrase_probs))[-self.beam_width:][::-1]
 
         self.top_phrases_so_far = [phrases_to_query[idx] for idx in top_phrase_indices]
-        print('Top phrases so far: ', self.top_phrases_so_far)
 
-        return self.top_phrases_so_far[0].lstrip('. ')  # return just top phrase
+
+        top_phrases = [phrase.lstrip('. ') for phrase in self.top_phrases_so_far]
+        print('New top phrases are: ', top_phrases)
+
+        return top_phrases
 
     def manually_add_text(self, text_to_add):
         """ manually add a text to all of the current top phrases -
@@ -126,17 +131,9 @@ class GPT2:
         """ Reset top phrases - called when clear button is called from display"""
         self.top_phrases_so_far = ['.']
 
-    def delete_last_word(self):
-        """ Delete last word from all top phrases - called when del button is pressed on display"""
+    def set_top_phrases(self, phrases):
 
-        current_top_phrases = self.top_phrases_so_far
-        new_top_phrases = []
-        for phrase in current_top_phrases:
-            words = phrase.split(' ')
-            new_phrase = ' '.join(words[:-1])
-            new_top_phrases.append(new_phrase)
-        self.top_phrases_so_far = list(set(new_top_phrases))
-        print('Top phrases after deleting word: {}'.format(self.top_phrases_so_far))
+        self.top_phrases_so_far = ['. {}'.format(phrase) for phrase in phrases]
 
 
 if __name__ == '__main__':
@@ -146,5 +143,4 @@ if __name__ == '__main__':
     model = GPT2()
     model.beam_width = 3
     model.top_phrases_so_far = _sentences
-    new_top_phrase = model.get_new_top_phrase(_next_words)
     print('stop here')

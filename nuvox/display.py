@@ -12,6 +12,8 @@ from nuvox.utils.sound_effects import SFX
 from nuvox.utils.common import add_line_breaks, strip_new_lines
 from nuvox.timer_thread import MyTimer
 
+from nuvox.multiple_choice_test import OptionDialog
+
 
 class Display:
 
@@ -45,27 +47,26 @@ class Display:
         self.gui.title("nuvox keyboard")
         self.gui.geometry("{}x{}".format(self.display_width, self.display_height))
         self.gui.resizable(width=False, height=False)
+        self.gui.bind('<Leave>', func=self.mouse_has_left_window)
 
         # TODO build new want of selecting keys with hover:
         self.current_key_in_focus = None  # track the id of the key currently in focus
-        self.required_time_in_focus = 2  # number of ms a key has to be hovered on before record_mouse_trace is toggled
-        self.interval_secs = 0.2
+        self.required_time_in_focus = 1  # number of ms a key has to be hovered on before record_mouse_trace is toggled
+        self.interval_secs = 0.1
         self.timer = MyTimer(self.required_time_in_focus, self.interval_secs,
                              self.on_single_key_in_focus_for_required_time,
                              self.on_every_second_a_key_is_in_focus)
         self.record_mouse_trace = False  # Flag to keep track of whether mouse movements should be recorded currently
 
         # Controlling colours of keys
-        self.default_fg = (0, 0, 0)
-        self.initial_bg = (0, 255, 255)
-        self.final_bg = (0, 64, 255)
+        self.default_fg = (255, 255, 255)
+        self.initial_bg = (32, 32, 32)
+        self.final_bg = (64, 0, 0)
         number_colour_increments = int(self.required_time_in_focus / self.interval_secs)
         self.rgb_increment = tuple([int(val) for val in ((np.array(self.final_bg) - np.array(self.initial_bg)) / number_colour_increments)])
 
         self.left_mouse_down = False
         self.gui.bind('<Motion>', self.record_mouse_position)
-
-        self.display_variable = StringVar()
 
         # dict mapping key_id to TK object
         self.key_id_to_widget = {}
@@ -83,9 +84,8 @@ class Display:
 
             if key.type == 'button':
                 text = ' '.join(key.contents).upper()
-                click_callback = lambda id: lambda: self.press_key(id)
                 obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), command=click_callback(key.key_id), font=("Calibri 18"))
+                             activebackground=rgb_to_hex(self.initial_bg), font=("Calibri 18"))
 
             elif key.type == 'speak_button':
                 text = ' '.join(key.contents).upper()
@@ -107,8 +107,22 @@ class Display:
                 obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
                              activebackground=rgb_to_hex(self.initial_bg), command=lambda: self.exit(), font=("Calibri 10"))
 
-            elif key.type == 'display':
-                obj = Label(self.gui, textvariable=self.display_variable, justify=LEFT, anchor=NW, font=("Calibri 12"))
+            elif key.type == 'display_frame':
+                display_frame = Frame(self.gui)
+                display_frame.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
+                for idx in range(self.beam_width):
+                    obj = Button(display_frame, text=''.format(idx), font=("Calibri 10"), anchor=W,
+                                 command=lambda: self.pick_from_prediction_list(idx_of_selected_phrase=idx),
+                                 fg=rgb_to_hex(self.default_fg),
+                                 bg=rgb_to_hex(self.initial_bg),
+                                 activebackground=rgb_to_hex(self.initial_bg)
+                                 )
+                    obj.place(relx=0, rely=(idx / self.beam_width), relwidth=1, relheight=(1 / self.beam_width))
+                    obj.bind('<Enter>', self.change_key_in_focus)
+                    key_id = 'display_button_{}'.format(idx)
+                    self.key_id_to_widget[key_id] = obj  # add to key_id -> widget dict
+                    self.key_id_to_key_object[key_id] = key  # add to key_id -> Key dict
+                continue
 
             else:
                 raise ValueError('Key type: {} not handled yet in build_display method'.format(key.type))
@@ -122,7 +136,6 @@ class Display:
 
     def start_display(self):
         """ Start display"""
-
         self.gui.mainloop()
 
     def predict_on_trace(self):
@@ -139,61 +152,75 @@ class Display:
         print('top 10 possible words are: ', possible_words)
 
         # Capitalize first word in new sentence TODO should also check if last char is . or ? or !
-        current_text = self._get_display_text()
-        if current_text == "" or current_text[-1] in ['.', '!', '?']:
+        current_phrases = self._get_current_display_phrases()
+        if current_phrases[0] == "" or current_phrases[0][-1] in ['.', '!', '?']:
             possible_words = [word.capitalize() for word in possible_words]
 
         # Use language model to predict new top phrase
-        new_top_phrase = self.language_model.get_new_top_phrase(possible_words)
+        new_top_phrases = self.language_model.get_new_top_phrases(possible_words)
 
-        self._set_display_text(new_top_phrase)
+        self._set_display_phrases(new_top_phrases)
 
-    def press_key(self, key_id):
-        """ method for updating display text when key is pressed"""
+    def pick_from_prediction_list(self, idx_of_selected_phrase):
+        """ Callback for each of the displayed option buttons
+        when one is selected we set that phrase to be THE only top phrase
+        """
+        current_phrases = self._get_current_display_phrases()
+        selected_phrase = current_phrases[idx_of_selected_phrase]
+        self._set_display_phrases([selected_phrase] + ['']*(self.beam_width-1))
+        self.language_model.set_top_phrases([selected_phrase])
 
-        key_contents = self.keyboard.key_id_to_contents[key_id]
-        if len(key_contents) == 1:
-            text_to_add = key_contents[0]
-        else:
-            if 'i' in key_contents:
-                text_to_add = ' I'
-            elif 'a' in key_contents:
-                if self._get_display_text() == '':
-                    text_to_add = ' A'
-                else:
-                    text_to_add = ' a'
-            else:
-                return
-
-        self.language_model.manually_add_text(text_to_add)
-        self._set_display_text(self.language_model.get_current_top_phrase())
 
     def press_speak(self):
         """
         Speak text on display
         """
-        display_text = self.display_variable.get()
-        display_text.lstrip('. ')
-        TextToSpeech().speak_text_in_new_thread(text=display_text)
+        top_phrase_widget = self.key_id_to_widget['display_button_0']
+        top_phase = top_phrase_widget.cget('text')
+        TextToSpeech().speak_text_in_new_thread(text=top_phase)
 
     def press_delete(self):
         """
         Delete last word on display
         """
-        current_display_text = self._get_display_text()
-        words = current_display_text.split(' ')
-        new_words = words[:-1]
-        new_display_text = ' '.join(new_words)
-        self._set_display_text(new_display_text)
+        current_phrases = self._get_current_display_phrases()
+        updated_phrases = []
+        for current_phrase in current_phrases:
+            words = current_phrase.split(' ')
+            new_words = words[:-1]
+            updated_phrases.append(' '.join(new_words))
+        updated_phrases = list(set(updated_phrases))  # remove duplicates
 
-        self.language_model.delete_last_word()
+        self._set_display_phrases(updated_phrases)
+        self.language_model.set_top_phrases(updated_phrases)
 
     def clear_display(self):
         """ clear display text and trace buffer"""
-        self._set_display_text("")
+
+        for idx in range(self.beam_width):
+            display_widget = self.key_id_to_widget['display_button_{}'.format(idx)]
+            display_widget.configure(text='')
+
         self.clear_visual_trace()
         self.clear_trace_buffer()
         self.language_model.reset()
+
+    def _set_display_phrases(self, phrases):
+        assert len(phrases) <= self.beam_width
+        for idx in range(self.beam_width):
+            widget = self.key_id_to_widget['display_button_{}'.format(idx)]
+            if idx <= len(phrases):
+                phrase = phrases[idx]
+            else:
+                phrase = ''
+            widget.configure(text=phrase)
+
+    def _get_current_display_phrases(self):
+        phrases = []
+        for idx in range(self.beam_width):
+            widget = self.key_id_to_widget['display_button_{}'.format(idx)]
+            phrases.append(widget.cget('text'))
+        return phrases
 
     def clear_trace_buffer(self):
         self.mouse_trace_buffer.clear()
@@ -218,20 +245,9 @@ class Display:
             current_widget = self.key_id_to_widget[current_key_in_focus]
             current_widget.configure(bg=rgb_to_hex(self.initial_bg), activebackground=rgb_to_hex(self.initial_bg))
 
-        # FIXME - the following will not work in debug if the mouse moves at all
-        relx = (self.gui.winfo_pointerx() - self.gui.winfo_x()) / self.gui.winfo_width()
-        rely = (self.gui.winfo_pointery() - self.gui.winfo_y()) / self.gui.winfo_height()
-        keys_in_focus = self.keyboard.get_key_ids_at_point(relx, rely)
-
-        if not keys_in_focus:
-            new_key_in_focus = None
-        elif len(keys_in_focus) == 1:
-            new_key_in_focus = keys_in_focus[0]
-        elif len(keys_in_focus) == 2:
-            keys_in_focus.remove(current_key_in_focus)  # happens when mouse position is right on border of two keys
-            new_key_in_focus = keys_in_focus[0]
-        else:
-            raise Exception('Found three keys at position ({:.1f}, {:.1f})'.format(relx, rely))
+        widget_in_focus = event.widget
+        widget_to_key_id = {v: k for k, v in self.key_id_to_widget.items()}  # TODO probably shouldn't have to do this every time
+        new_key_in_focus = widget_to_key_id[widget_in_focus]
 
         print('New key in focus is {} - restarting timer'.format(new_key_in_focus))
 
@@ -242,6 +258,20 @@ class Display:
         self.timer.start()
 
         self.current_key_in_focus = new_key_in_focus
+
+    def mouse_has_left_window(self, event):
+        """ Called by Leave event on root window
+        it cancels the timer, resets the colour of the last key in focus and then sets the current key in focus to None
+        """
+        self.timer.cancel()
+
+        if self.current_key_in_focus is not None:
+            widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
+            new_hex = rgb_to_hex(self.initial_bg)
+            widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
+
+            self.current_key_in_focus = None
+
 
     def on_single_key_in_focus_for_required_time(self):
         print('record_mouse_trace changing from {}'.format(self.record_mouse_trace))
@@ -255,13 +285,13 @@ class Display:
                 self.clear_trace_buffer()  # clear trace ready for next swype
                 self.record_mouse_trace = False
 
-        else:
+        else:  # mouse trace is NOT currently being recorded
             SFX().button_click_sfx_in_new_thread(type='select')  # play button unselect sound in new thread
 
             key_object_in_focus = self.key_id_to_key_object[self.current_key_in_focus]
 
             # If key in focus is a non-text key then we execute that buttons command but do NOT start trace recorded
-            if key_object_in_focus.type in ['speak_button', 'delete_button', 'clear_button', 'exit_button']:
+            if key_object_in_focus.type in ['speak_button', 'delete_button', 'clear_button', 'exit_button', 'display_frame']:
                 widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
                 widget_in_focus.invoke()  # trigger click on this button
             else:
@@ -354,15 +384,6 @@ class Display:
             obj.place(relx=x, rely=y, width=10, height=10)
             self.trace_labels.append(obj)
             self.gui.update()
-
-    def _get_display_text(self):
-        """ Get display text but remove new line chars"""
-        return strip_new_lines(self.display_variable.get())
-
-    def _set_display_text(self, text):
-        """ Set display text but insert line breaks """
-        # TODO need to find a beetter way to determine when the line is full
-        self.display_variable.set(add_line_breaks(text=text, char_lim=44))
 
 
 def rgb_to_hex(rgb):
