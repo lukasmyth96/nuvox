@@ -73,6 +73,9 @@ class Display:
         # dict mapping key_id to TK object
         self.key_id_to_widget = {}
 
+        # dict mapping key_id to nuvox.keyboard.Key object
+        self.key_id_to_key_object = {}
+
         self.mouse_trace_buffer = deque(maxlen=200)  # store coordinates of mouse in buffer of fixed length
         self.trace_labels = []  # store label objects for trace
         self.build_display()
@@ -116,7 +119,9 @@ class Display:
             obj.bind('<Enter>', self.change_key_in_focus)
 
             obj.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
-            self.key_id_to_widget[key.key_id] = obj
+
+            self.key_id_to_widget[key.key_id] = obj  # add to key_id -> widget dict
+            self.key_id_to_key_object[key.key_id] = key  # add to key_id -> Key dict
 
     def start_display(self):
         """ Start display"""
@@ -243,18 +248,30 @@ class Display:
 
     def on_single_key_in_focus_for_required_time(self):
         print('record_mouse_trace changing from {}'.format(self.record_mouse_trace))
+
+        # If mouse trace is currently being recorded then stop the trace, predict the intended word and then clear the trace
         if self.record_mouse_trace:
             if self.mouse_trace_buffer:
                 self.predict_on_trace()  # this function calls the prediction
                 self.clear_trace()  # clear trace ready for next word
+                self.record_mouse_trace = False
 
-        self.record_mouse_trace = not self.record_mouse_trace
+        else:
+            key_object_in_focus = self.key_id_to_key_object[self.current_key_in_focus]
+
+            # If key in focus is a non-text key then we execute that buttons command but do NOT start trace recorded
+            if key_object_in_focus.type in ['speak_button', 'delete_button', 'clear_button', 'exit_button']:
+                widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
+                widget_in_focus.invoke()  # trigger click on this button
+            else:
+                self.record_mouse_trace = True
+
 
     def on_every_second_a_key_is_in_focus(self, seconds_passed):
 
         # Change colour value of key in focus
         widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
-        if seconds_passed == self.required_time_in_focus:
+        if seconds_passed == self.required_time_in_focus - self.interval_secs:
             new_hex = rgb_to_hex(self.initial_bg)
         else:
             current_hex = widget_in_focus.cget('bg')
