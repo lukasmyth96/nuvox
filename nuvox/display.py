@@ -1,9 +1,5 @@
 from collections import deque
-import random
-import asyncio
-import threading
-import time
-import queue
+
 from tkinter import *
 
 import numpy as np
@@ -11,7 +7,8 @@ import numpy as np
 import nuvox
 from nuvox.trace_model import TraceModel
 from nuvox.language_model import GPT2
-from nuvox.utils.text_to_speech import speak_text
+from nuvox.utils.text_to_speech import TextToSpeech
+from nuvox.utils.sound_effects import SFX
 from nuvox.utils.common import add_line_breaks, strip_new_lines
 from nuvox.timer_thread import MyTimer
 
@@ -138,7 +135,7 @@ class Display:
             print('Trace model returned no possible words - try again')
             return False
 
-        possible_words = possible_words[:self.beam_width]  # TODO currently just limiting the numbere of words that the language model can predict on
+        possible_words = possible_words[:self.beam_width]  # TODO currently just limiting the number of words that the language model can predict on
         print('top 10 possible words are: ', possible_words)
 
         # Capitalize first word in new sentence TODO should also check if last char is . or ? or !
@@ -177,7 +174,7 @@ class Display:
         """
         display_text = self.display_variable.get()
         display_text.lstrip('. ')
-        speak_text(text=display_text)
+        TextToSpeech().speak_text_in_new_thread(text=display_text)
 
     def press_delete(self):
         """
@@ -194,16 +191,16 @@ class Display:
     def clear_display(self):
         """ clear display text and trace buffer"""
         self._set_display_text("")
-        self.clear_trace()
+        self.clear_visual_trace()
+        self.clear_trace_buffer()
         self.language_model.reset()
 
-    def clear_trace(self):
-        """ Clear only the trace buffer """
-        # destroy all labels and clear trace buffer
+    def clear_trace_buffer(self):
+        self.mouse_trace_buffer.clear()
+
+    def clear_visual_trace(self):
         for label in self.trace_labels:
             label.destroy()
-
-        self.mouse_trace_buffer.clear()
 
     def exit(self):
         self.timer.cancel()
@@ -251,12 +248,16 @@ class Display:
 
         # If mouse trace is currently being recorded then stop the trace, predict the intended word and then clear the trace
         if self.record_mouse_trace:
+            SFX().button_click_sfx_in_new_thread(type='unselect')  # play button unselect sound in new thread
             if self.mouse_trace_buffer:
+                self.clear_visual_trace()  # clear visual trace first so that it doesn't linger during model prediction
                 self.predict_on_trace()  # this function calls the prediction
-                self.clear_trace()  # clear trace ready for next word
+                self.clear_trace_buffer()  # clear trace ready for next swype
                 self.record_mouse_trace = False
 
         else:
+            SFX().button_click_sfx_in_new_thread(type='select')  # play button unselect sound in new thread
+
             key_object_in_focus = self.key_id_to_key_object[self.current_key_in_focus]
 
             # If key in focus is a non-text key then we execute that buttons command but do NOT start trace recorded
@@ -270,14 +271,17 @@ class Display:
     def on_every_second_a_key_is_in_focus(self, seconds_passed):
 
         # Change colour value of key in focus
-        widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
-        if seconds_passed == self.required_time_in_focus - self.interval_secs:
-            new_hex = rgb_to_hex(self.initial_bg)
-        else:
-            current_hex = widget_in_focus.cget('bg')
-            new_hex = rgb_to_hex(tuple(np.array(hex_to_rgb(current_hex)) + np.array(self.rgb_increment)))
-        widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
-        print('{} seconds passed'.format(seconds_passed))
+        if self.current_key_in_focus is not None:
+            widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
+            # FIXME line below is a hack to account for the fact that the main timer finished before the periodic
+            # FIXME .. has time to send it's final callback
+            if seconds_passed >= self.required_time_in_focus - self.interval_secs - 1e-5:
+                new_hex = rgb_to_hex(self.initial_bg)
+            else:
+                current_hex = widget_in_focus.cget('bg')
+                new_hex = rgb_to_hex(tuple(np.array(hex_to_rgb(current_hex)) + np.array(self.rgb_increment)))
+            widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
+            print('{} seconds passed'.format(seconds_passed))
 
     def record_mouse_position(self, event):
         """Record mouse trace when flag is set to True"""
