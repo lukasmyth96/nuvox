@@ -84,27 +84,32 @@ class Display:
             if key.type == 'button':
                 text = ' '.join(key.contents).upper()
                 obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), font=("Calibri 18"))
+                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black',
+                             relief=RAISED, font=("Calibri 18"))
 
             elif key.type == 'speak_button':
                 text = ' '.join(key.contents).upper()
                 obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), command=lambda: self.press_speak(), font=("Calibri 10"))
+                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black', relief=RAISED,
+                             command=lambda: self.press_speak(), font=("Calibri 10"))
 
             elif key.type == 'delete_button':
                 text = ' '.join(key.contents).upper()
                 obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), command=lambda: self.press_delete(), font=("Calibri 10"))
+                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black', relief=RAISED,
+                             command=lambda: self.press_delete(), font=("Calibri 10"))
 
             elif key.type == 'clear_button':
                 text = ' '.join(key.contents).upper()
                 obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), command=lambda: self.clear_display(), font=("Calibri 10"))
+                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black', relief=RAISED,
+                             command=lambda: self.clear_display(), font=("Calibri 10"))
 
             elif key.type == 'exit_button':
                 text = ' '.join(key.contents).upper()
                 obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), command=lambda: self.exit(), font=("Calibri 10"))
+                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black', relief=RAISED,
+                             command=lambda: self.exit(), font=("Calibri 10"))
 
             elif key.type == 'display_frame':
                 display_frame = Frame(self.gui)
@@ -115,7 +120,8 @@ class Display:
                                  command=selection_callback(idx),
                                  fg=rgb_to_hex(self.default_fg),
                                  bg=rgb_to_hex(self.initial_bg),
-                                 activebackground=rgb_to_hex(self.initial_bg)
+                                 activebackground=rgb_to_hex(self.initial_bg),
+                                 highlightthickness=2, highlightbackground='black', relief=RAISED
                                  )
                     obj.place(relx=0, rely=(idx / self.beam_width), relwidth=1, relheight=(1 / self.beam_width))
                     obj.bind('<Enter>', self.change_key_in_focus)
@@ -222,7 +228,6 @@ class Display:
             display_widget = self.key_id_to_widget['display_button_{}'.format(idx)]
             display_widget.configure(text='')
 
-        self.clear_visual_trace()
         self.clear_trace_buffer()
         self.language_model.reset()
 
@@ -248,10 +253,6 @@ class Display:
     def clear_trace_buffer(self):
         self.mouse_trace_buffer.clear()
 
-    def clear_visual_trace(self):
-        for label in self.trace_labels:
-            label.destroy()
-
     def exit(self):
         self.timer.cancel()
         self.gui.destroy()
@@ -272,15 +273,16 @@ class Display:
         widget_to_key_id = {v: k for k, v in self.key_id_to_widget.items()}  # TODO probably shouldn't have to do this every time
         new_key_in_focus = widget_to_key_id[widget_in_focus]
 
-        print('New key in focus is {} - restarting timer'.format(new_key_in_focus))
+        # If statement prevents timer restarting on same key after word is predicted
+        if new_key_in_focus != current_key_in_focus and new_key_in_focus is not None:
+            print('Current key in focus is {} - New key in focus is {}'.format(current_key_in_focus, new_key_in_focus))
+            self.timer.cancel()
+            self.timer = MyTimer(self.required_time_in_focus, self.interval_secs,
+                                 self.on_single_key_in_focus_for_required_time,
+                                 self.on_every_second_a_key_is_in_focus)
+            self.timer.start()
 
-        self.timer.cancel()
-        self.timer = MyTimer(self.required_time_in_focus, self.interval_secs,
-                             self.on_single_key_in_focus_for_required_time,
-                             self.on_every_second_a_key_is_in_focus)
-        self.timer.start()
-
-        self.current_key_in_focus = new_key_in_focus
+            self.current_key_in_focus = new_key_in_focus
 
     def on_single_key_in_focus_for_required_time(self):
 
@@ -290,7 +292,7 @@ class Display:
         if self.record_mouse_trace:
             SFX().button_click_sfx_in_new_thread(type='unselect')  # play button unselect sound in new thread
             if self.mouse_trace_buffer:
-                self.clear_visual_trace()  # clear visual trace first so that it doesn't linger during model prediction
+                self.change_border_colour(colour='black')
                 self.predict_on_trace()  # this function calls the prediction
                 self.show_top_pred_word_popup(current_key_in_focus)
                 self.clear_trace_buffer()  # clear trace ready for next swype
@@ -308,7 +310,14 @@ class Display:
                 widget_in_focus.invoke()  # trigger click on this button
             else:
                 self.record_mouse_trace = True
+                self.change_border_colour(colour='red')
                 print('Turning ON mouse recording')
+
+    def change_border_colour(self, colour='red'):
+        """ Change border colour"""
+        for widget in self.key_id_to_widget.values():
+            widget.configure(highlightbackground=colour)
+        self.gui.update()
 
     def on_every_second_a_key_is_in_focus(self, seconds_passed):
 
@@ -327,12 +336,13 @@ class Display:
 
     def record_mouse_position(self, event):
         """Record mouse trace when flag is set to True"""
+
         if self.record_mouse_trace:
+
             relx = (self.gui.winfo_pointerx() - self.gui.winfo_x()) / self.gui.winfo_width()
             rely = (self.gui.winfo_pointery() - self.gui.winfo_y()) / self.gui.winfo_height()
 
             # append coordinate to buffer only if euclidean distance exceeds minimum delta
-
             if not self.mouse_trace_buffer:
                 self.mouse_trace_buffer.appendleft((relx, rely))
             else:
@@ -341,22 +351,20 @@ class Display:
                 if euclidean_dist > 0.05 or not self.mouse_trace_buffer:
                     self.mouse_trace_buffer.appendleft((relx, rely))
 
-                    self.plot_single_point(relx, rely)
+                    #self.plot_single_trace_point(relx, rely)
 
                     print('x={:.2f}, y={:.2f}'.format(relx, rely))
 
     def mouse_has_left_window(self, event):
-        """ Called by Leave event on root window
+        """ Called from record_mouse_position() when x, y coords are found to fall outside window
         it cancels the timer, resets the colour of the last key in focus and then sets the current key in focus to None
         """
         self.timer.cancel()
+        print('mouse has left window')
+        widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
+        new_hex = rgb_to_hex(self.initial_bg)
+        widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
 
-        if self.current_key_in_focus is not None:
-            widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
-            new_hex = rgb_to_hex(self.initial_bg)
-            widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
-
-            self.current_key_in_focus = None
 
     def set_trace_model(self, model):
         """
@@ -391,9 +399,9 @@ class Display:
 
         # Plot trace with yellow->red heatmap
         for idx, (x, y) in enumerate(trace):
-            self.plot_single_point(x, y, hex_cols[idx])
+            self.plot_single_trace_point(x, y, hex_cols[idx])
 
-    def plot_single_point(self, x, y, colour='red'):
+    def plot_single_trace_point(self, x, y, colour='red'):
         """
         Plot single point of trace
         Parameters
