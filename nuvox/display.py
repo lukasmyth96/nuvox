@@ -1,4 +1,5 @@
 from collections import deque
+import time
 
 from tkinter import *
 
@@ -9,7 +10,6 @@ from nuvox.trace_model import TraceModel
 from nuvox.language_model import GPT2
 from nuvox.utils.text_to_speech import TextToSpeech
 from nuvox.utils.sound_effects import SFX
-from nuvox.utils.common import add_line_breaks, strip_new_lines
 from nuvox.timer_thread import MyTimer
 
 from nuvox.multiple_choice_test import OptionDialog
@@ -49,7 +49,8 @@ class Display:
         self.gui.resizable(width=False, height=False)
         self.gui.bind('<Leave>', func=self.mouse_has_left_window)
 
-        # TODO build new want of selecting keys with hover:
+        # For swype controls
+        self.gui.bind('<Motion>', self.record_mouse_position)
         self.current_key_in_focus = None  # track the id of the key currently in focus
         self.required_time_in_focus = 1  # number of ms a key has to be hovered on before record_mouse_trace is toggled
         self.interval_secs = 0.1
@@ -65,9 +66,6 @@ class Display:
         number_colour_increments = int(self.required_time_in_focus / self.interval_secs)
         self.rgb_increment = tuple([int(val) for val in ((np.array(self.final_bg) - np.array(self.initial_bg)) / number_colour_increments)])
 
-        self.left_mouse_down = False
-        self.gui.bind('<Motion>', self.record_mouse_position)
-
         # dict mapping key_id to TK object
         self.key_id_to_widget = {}
 
@@ -76,6 +74,7 @@ class Display:
 
         self.mouse_trace_buffer = deque(maxlen=200)  # store coordinates of mouse in buffer of fixed length
         self.trace_labels = []  # store label objects for trace
+
         self.build_display()
 
     def build_display(self):
@@ -171,19 +170,40 @@ class Display:
         self._set_display_phrases([selected_phrase] + ['']*(self.beam_width-1))
         self.language_model.set_top_phrases([selected_phrase])
 
+    def show_top_pred_word_popup(self, current_key_in_focus):
+        """
+        Show a popup over the current key in focus displaying the top predicted new word.
+        This will allow the user to see whether the top prediction is what they intended without repeatedly having
+        to check the display frame.
+        This function is called from within on_single_key_in_focus_for_required_time()
+        Parameters
+        ----------
+        current_key_in_focus: str
+            key_id of the key that was in focus at the end of the trace
+        """
+        key_obj = self.key_id_to_key_object[current_key_in_focus]
+        current_phrases = self._get_current_display_phrases()
+        top_phrase = current_phrases[0]
+
+        if ' ' in top_phrase:
+            top_phrase_words = top_phrase.split()
+            latest_word = top_phrase_words[-1]
+        else:
+            latest_word = top_phrase
+
+        label = Label(self.gui, text=latest_word, fg='red', bg=rgb_to_hex(self.initial_bg),
+                      activebackground=rgb_to_hex(self.initial_bg), font=("Calibri 16 bold"))
+        label.place(relx=key_obj.x1, rely=key_obj.y1, relwidth=key_obj.w, relheight=key_obj.h)
+        time.sleep(0.3)
+        label.destroy()
+
 
     def press_speak(self):
-        """
-        Speak text on display
-        """
         top_phrase_widget = self.key_id_to_widget['display_button_0']
         top_phase = top_phrase_widget.cget('text')
         TextToSpeech().speak_text_in_new_thread(text=top_phase)
 
     def press_delete(self):
-        """
-        Delete last word on display
-        """
         current_phrases = [phrase for phrase in self._get_current_display_phrases() if phrase != '']
         updated_phrases = []
         for current_phrase in current_phrases:
@@ -210,10 +230,12 @@ class Display:
         assert len(phrases) <= self.beam_width
         for idx in range(self.beam_width):
             widget = self.key_id_to_widget['display_button_{}'.format(idx)]
-            if idx <= len(phrases):
+            if idx < len(phrases):
                 phrase = phrases[idx]
             else:
                 phrase = ''
+            if len(phrase) > 44:
+                widget.configure(anchor=E)  # align text right after reached end of line so latest words can be read
             widget.configure(text=phrase)
 
     def _get_current_display_phrases(self):
@@ -260,22 +282,7 @@ class Display:
 
         self.current_key_in_focus = new_key_in_focus
 
-    def mouse_has_left_window(self, event):
-        """ Called by Leave event on root window
-        it cancels the timer, resets the colour of the last key in focus and then sets the current key in focus to None
-        """
-        self.timer.cancel()
-
-        if self.current_key_in_focus is not None:
-            widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
-            new_hex = rgb_to_hex(self.initial_bg)
-            widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
-
-            self.current_key_in_focus = None
-
-
     def on_single_key_in_focus_for_required_time(self):
-        print('record_mouse_trace changing from {}'.format(self.record_mouse_trace))
 
         current_key_in_focus = self.current_key_in_focus  # define here in case it changes
 
@@ -285,13 +292,15 @@ class Display:
             if self.mouse_trace_buffer:
                 self.clear_visual_trace()  # clear visual trace first so that it doesn't linger during model prediction
                 self.predict_on_trace()  # this function calls the prediction
+                self.show_top_pred_word_popup(current_key_in_focus)
                 self.clear_trace_buffer()  # clear trace ready for next swype
                 self.record_mouse_trace = False
+                print('Turing OFF mouse recording')
 
         else:  # mouse trace is NOT currently being recorded
             SFX().button_click_sfx_in_new_thread(type='select')  # play button unselect sound in new thread
 
-            key_object_in_focus = self.key_id_to_key_object[self.current_key_in_focus]
+            key_object_in_focus = self.key_id_to_key_object[current_key_in_focus]
 
             # If key in focus is a non-text key then we execute that buttons command but do NOT start trace recorded
             if key_object_in_focus.type in ['speak_button', 'delete_button', 'clear_button', 'exit_button', 'display_frame']:
@@ -299,7 +308,7 @@ class Display:
                 widget_in_focus.invoke()  # trigger click on this button
             else:
                 self.record_mouse_trace = True
-
+                print('Turning ON mouse recording')
 
     def on_every_second_a_key_is_in_focus(self, seconds_passed):
 
@@ -308,7 +317,7 @@ class Display:
             widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
             # FIXME line below is a hack to account for the fact that the main timer finished before the periodic
             # FIXME .. has time to send it's final callback
-            if seconds_passed >= self.required_time_in_focus - self.interval_secs - 1e-5:
+            if seconds_passed >= self.required_time_in_focus - self.interval_secs - 1e-3:
                 new_hex = rgb_to_hex(self.initial_bg)
             else:
                 current_hex = widget_in_focus.cget('bg')
@@ -335,6 +344,19 @@ class Display:
                     self.plot_single_point(relx, rely)
 
                     print('x={:.2f}, y={:.2f}'.format(relx, rely))
+
+    def mouse_has_left_window(self, event):
+        """ Called by Leave event on root window
+        it cancels the timer, resets the colour of the last key in focus and then sets the current key in focus to None
+        """
+        self.timer.cancel()
+
+        if self.current_key_in_focus is not None:
+            widget_in_focus = self.key_id_to_widget[self.current_key_in_focus]
+            new_hex = rgb_to_hex(self.initial_bg)
+            widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
+
+            self.current_key_in_focus = None
 
     def set_trace_model(self, model):
         """
