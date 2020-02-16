@@ -1,5 +1,5 @@
 import itertools
-import string
+import math
 
 import numpy as np
 
@@ -15,8 +15,7 @@ class GPT2:
 
     def __init__(self):
 
-        self.keras_model = TFGPT2LMHeadModel.from_pretrained('/home/luka/PycharmProjects/nuvox/models/language_models/distilled_gpt2')
-        print('\n\n Finished loading pretrained model')
+        self.keras_model = None
 
         self.max_seq_len = 16
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -25,6 +24,12 @@ class GPT2:
 
         self.beam_width = 10
         self.top_phrases_so_far = ["."]   # list to store current most likely phrases in beam search
+
+    def load_model(self, model_dir):
+        self.keras_model = TFGPT2LMHeadModel.from_pretrained(model_dir)
+        self.get_phrase_probabilities('warm up')  # to prevent first real prediction being slow
+        print('\n\n Finished loading pretrained model')
+
 
     def _encode(self, text):
         """ encode single string of text"""
@@ -52,12 +57,15 @@ class GPT2:
             token_ids = self._encode(sentence)
             batch[idx] = token_ids
 
-        pred = self.keras_model.predict(batch, batch_size=32)
+        pred = self.keras_model.predict(batch, batch_size=self.beam_width**2)
 
         sentence_probs = []
 
         softmax = Softmax()
         for sentence_idx in range(batch_size):
+
+            if sentence_idx == len(sentences):
+                break
 
             combined_probs = {}  # dict mapping each word in phrase to the probability that it would appear
             token_ids = batch[sentence_idx]
@@ -79,10 +87,6 @@ class GPT2:
             sentence_probs.append(sentence_prob)
 
         return sentence_probs
-
-    def get_current_top_phrase(self):
-        """ return current top phrase"""
-        return self.top_phrases_so_far[0].lstrip('. ')
 
     def get_new_top_phrases(self, pred_words):
 
@@ -118,13 +122,17 @@ class GPT2:
 
         return top_phrases
 
-    def manually_add_text(self, text_to_add):
+    def get_current_top_phrases(self):
+        """ return current top phrase"""
+        return [phrase.lstrip('. ') for phrase in self.top_phrases_so_far]
+
+    def manually_add_word(self, word, sep=' '):
         """ manually add a text to all of the current top phrases -
         """
         current_top_phrases = self.top_phrases_so_far
         self.top_phrases_so_far = []
         for phrase in current_top_phrases:
-            phrase += text_to_add
+            phrase = sep.join([phrase, word])
             self.top_phrases_so_far.append(phrase)
 
     def reset(self):

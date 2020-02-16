@@ -12,8 +12,6 @@ from nuvox.utils.text_to_speech import TextToSpeech
 from nuvox.utils.sound_effects import SFX
 from nuvox.timer_thread import MyTimer
 
-from nuvox.multiple_choice_test import OptionDialog
-
 
 class Display:
 
@@ -36,11 +34,8 @@ class Display:
         self.display_height = display_height
 
         self.trace_model = None
-
+        self.language_model = None
         self.beam_width = 5
-
-        self.language_model = GPT2()
-        self.language_model.beam_width = self.beam_width
 
         self.gui = Tk()
         self.gui.configure(background="steel blue")
@@ -52,7 +47,7 @@ class Display:
         # For swype controls
         self.gui.bind('<Motion>', self.record_mouse_position)
         self.current_key_in_focus = None  # track the id of the key currently in focus
-        self.required_time_in_focus = 1  # number of ms a key has to be hovered on before record_mouse_trace is toggled
+        self.required_time_in_focus = 0.7  # number of ms a key has to be hovered on before record_mouse_trace is toggled
         self.interval_secs = 0.1
         self.timer = MyTimer(self.required_time_in_focus, self.interval_secs,
                              self.on_single_key_in_focus_for_required_time,
@@ -81,51 +76,32 @@ class Display:
         """ Build gui from information in keyboard object"""
         for key in self.keyboard.keys:
 
-            if key.type == 'button':
+            if key.type in ['text_key', 'punctuation_key', 'null_key']:
                 text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black',
-                             relief=RAISED, font=("Calibri 18"))
+                obj = self._create_button_object(master=self.gui, text=text)
 
             elif key.type == 'speak_button':
-                text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black', relief=RAISED,
-                             command=lambda: self.press_speak(), font=("Calibri 10"))
+                obj = self._create_button_object(master=self.gui, text=' '.join(key.contents).upper(), command=self.press_speak)
 
             elif key.type == 'delete_button':
-                text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black', relief=RAISED,
-                             command=lambda: self.press_delete(), font=("Calibri 10"))
+                obj = self._create_button_object(master=self.gui, text=' '.join(key.contents).upper(), command=self.press_delete)
 
             elif key.type == 'clear_button':
-                text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black', relief=RAISED,
-                             command=lambda: self.clear_display(), font=("Calibri 10"))
+                obj = self._create_button_object(master=self.gui, text=' '.join(key.contents).upper(), command=self.clear_display)
 
             elif key.type == 'exit_button':
-                text = ' '.join(key.contents).upper()
-                obj = Button(self.gui, text=text, fg=rgb_to_hex(self.default_fg), bg=rgb_to_hex(self.initial_bg),
-                             activebackground=rgb_to_hex(self.initial_bg), highlightthickness=2, highlightbackground='black', relief=RAISED,
-                             command=lambda: self.exit(), font=("Calibri 10"))
+                obj = self._create_button_object(master=self.gui, text=' '.join(key.contents).upper(), command=self.exit)
 
             elif key.type == 'display_frame':
                 display_frame = Frame(self.gui)
                 display_frame.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
                 for idx in range(self.beam_width):
                     selection_callback = lambda idx: lambda: self.pick_from_prediction_list(idx)
-                    obj = Button(display_frame, text=''.format(idx), font=("Calibri 10"), anchor=W,
-                                 command=selection_callback(idx),
-                                 fg=rgb_to_hex(self.default_fg),
-                                 bg=rgb_to_hex(self.initial_bg),
-                                 activebackground=rgb_to_hex(self.initial_bg),
-                                 highlightthickness=2, highlightbackground='black', relief=RAISED
-                                 )
+                    obj = self._create_button_object(master=display_frame, text='', command=selection_callback(idx),
+                                                     anchor=W, fontsize=10)
                     obj.place(relx=0, rely=(idx / self.beam_width), relwidth=1, relheight=(1 / self.beam_width))
                     obj.bind('<Enter>', self.change_key_in_focus)
-                    key_id = 'display_button_{}'.format(idx)
+                    key_id = 'display_box_{}'.format(idx)
                     self.key_id_to_widget[key_id] = obj  # add to key_id -> widget dict
                     self.key_id_to_key_object[key_id] = key  # add to key_id -> Key dict
                 continue
@@ -134,9 +110,7 @@ class Display:
                 raise ValueError('Key type: {} not handled yet in build_display method'.format(key.type))
 
             obj.bind('<Enter>', self.change_key_in_focus)
-
             obj.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
-
             self.key_id_to_widget[key.key_id] = obj  # add to key_id -> widget dict
             self.key_id_to_key_object[key.key_id] = key  # add to key_id -> Key dict
 
@@ -154,10 +128,10 @@ class Display:
             print('Trace model returned no possible words - try again')
             return False
 
-        possible_words = possible_words[:self.beam_width]  # TODO currently just limiting the number of words that the language model can predict on
-        print('top 10 possible words are: ', possible_words)
+        possible_words = possible_words[:self.beam_width]
+        print('top {} possible words are: {}'.format(self.beam_width, possible_words))
 
-        # Capitalize first word in new sentence TODO should also check if last char is . or ? or !
+        # Capitalize first word in new sentence
         current_phrases = self._get_current_display_phrases()
         if current_phrases[0] == "" or current_phrases[0][-1] in ['.', '!', '?']:
             possible_words = [word.capitalize() for word in possible_words]
@@ -198,14 +172,14 @@ class Display:
             latest_word = top_phrase
 
         label = Label(self.gui, text=latest_word, fg='red', bg=rgb_to_hex(self.initial_bg),
-                      activebackground=rgb_to_hex(self.initial_bg), font=("Calibri 16 bold"))
+                      activebackground=rgb_to_hex(self.initial_bg), font=("Calibri 20 bold"))
         label.place(relx=key_obj.x1, rely=key_obj.y1, relwidth=key_obj.w, relheight=key_obj.h)
         time.sleep(0.3)
         label.destroy()
 
 
     def press_speak(self):
-        top_phrase_widget = self.key_id_to_widget['display_button_0']
+        top_phrase_widget = self.key_id_to_widget['display_box_0']
         top_phase = top_phrase_widget.cget('text')
         TextToSpeech().speak_text_in_new_thread(text=top_phase)
 
@@ -225,7 +199,7 @@ class Display:
         """ clear display text and trace buffer"""
 
         for idx in range(self.beam_width):
-            display_widget = self.key_id_to_widget['display_button_{}'.format(idx)]
+            display_widget = self.key_id_to_widget['display_box_{}'.format(idx)]
             display_widget.configure(text='')
 
         self.clear_trace_buffer()
@@ -234,19 +208,21 @@ class Display:
     def _set_display_phrases(self, phrases):
         assert len(phrases) <= self.beam_width
         for idx in range(self.beam_width):
-            widget = self.key_id_to_widget['display_button_{}'.format(idx)]
+            widget = self.key_id_to_widget['display_box_{}'.format(idx)]
             if idx < len(phrases):
                 phrase = phrases[idx]
             else:
                 phrase = ''
             if len(phrase) > 44:
                 widget.configure(anchor=E)  # align text right after reached end of line so latest words can be read
+            else:
+                widget.configure(anchor=W)
             widget.configure(text=phrase)
 
     def _get_current_display_phrases(self):
         phrases = []
         for idx in range(self.beam_width):
-            widget = self.key_id_to_widget['display_button_{}'.format(idx)]
+            widget = self.key_id_to_widget['display_box_{}'.format(idx)]
             phrases.append(widget.cget('text'))
         return phrases
 
@@ -287,14 +263,16 @@ class Display:
     def on_single_key_in_focus_for_required_time(self):
 
         current_key_in_focus = self.current_key_in_focus  # define here in case it changes
+        key_object_in_focus = self.key_id_to_key_object[current_key_in_focus]
 
         # If mouse trace is currently being recorded then stop the trace, predict the intended word and then clear the trace
         if self.record_mouse_trace:
             SFX().button_click_sfx_in_new_thread(type='unselect')  # play button unselect sound in new thread
             if self.mouse_trace_buffer:
                 self.change_border_colour(colour='black')
-                self.predict_on_trace()  # this function calls the prediction
-                self.show_top_pred_word_popup(current_key_in_focus)
+                if key_object_in_focus.type == 'text_key':
+                    self.predict_on_trace()  # this function calls the prediction
+                    self.show_top_pred_word_popup(current_key_in_focus)
                 self.clear_trace_buffer()  # clear trace ready for next swype
                 self.record_mouse_trace = False
                 print('Turing OFF mouse recording')
@@ -302,16 +280,24 @@ class Display:
         else:  # mouse trace is NOT currently being recorded
             SFX().button_click_sfx_in_new_thread(type='select')  # play button unselect sound in new thread
 
-            key_object_in_focus = self.key_id_to_key_object[current_key_in_focus]
-
             # If key in focus is a non-text key then we execute that buttons command but do NOT start trace recorded
             if key_object_in_focus.type in ['speak_button', 'delete_button', 'clear_button', 'exit_button', 'display_frame']:
                 widget_in_focus = self.key_id_to_widget[current_key_in_focus]
                 widget_in_focus.invoke()  # trigger click on this button
-            else:
+            elif key_object_in_focus.type == 'punctuation_key':
+                punctuation = key_object_in_focus.contents[0]
+                self.language_model.manually_add_word(word=punctuation, sep='')
+                updated_phrases = self.language_model.get_current_top_phrases()
+                self._set_display_phrases(updated_phrases)
+
+            elif key_object_in_focus.type == 'text_key':
                 self.record_mouse_trace = True
                 self.change_border_colour(colour='red')
                 print('Turning ON mouse recording')
+            elif key_object_in_focus.type == 'null_key':
+                pass
+            else:
+                raise ValueError('Unknown key type')
 
     def change_border_colour(self, colour='red'):
         """ Change border colour"""
@@ -351,8 +337,6 @@ class Display:
                 if euclidean_dist > 0.05 or not self.mouse_trace_buffer:
                     self.mouse_trace_buffer.appendleft((relx, rely))
 
-                    #self.plot_single_trace_point(relx, rely)
-
                     print('x={:.2f}, y={:.2f}'.format(relx, rely))
 
     def mouse_has_left_window(self, event):
@@ -386,37 +370,47 @@ class Display:
 
         print('Available vocab words are: \n\n {}'.format(self.trace_model.config.VOCAB))
 
-    def plot_trace(self, trace):
-        """ plot trace
+    def set_language_model(self, model):
+        """
+        Set prediction model - carry out some checks on the model
         Parameters
         ----------
-        trace: list(tuple)
-            list of relative (x, y) coords to plot
+        model: nuvox.language_model.GPT2
         """
 
-        rgb_cols = [(255, yellow, 0) for yellow in np.linspace(255, 0, len(trace), dtype=int)]
-        hex_cols = [rgb_to_hex(rgb) for rgb in rgb_cols]
 
-        # Plot trace with yellow->red heatmap
-        for idx, (x, y) in enumerate(trace):
-            self.plot_single_trace_point(x, y, hex_cols[idx])
+        if not isinstance(model, nuvox.language_model.GPT2):
+            raise ValueError('Parameter: model must be an instance of nuvox.trace_model.TraceModel')
 
-    def plot_single_trace_point(self, x, y, colour='red'):
+        self.language_model = model
+        self.language_model.beam_width = self.beam_width
+
+
+    def _create_button_object(self, master, text=None, command=None, anchor=CENTER, fontsize=18):
         """
-        Plot single point of trace
+        Create and return TKinter Button object
         Parameters
         ----------
-        x: float
-        y: float
-        colour: str
-            colour name of hex string
-        """
+        master:
+        text: str
+        command: function
 
-        if (0 <= x <= 1) and (0 <= y <= 1):
-            obj = Label(self.gui, text='', bg=colour)  # all same colour for now
-            obj.place(relx=x, rely=y, width=10, height=10)
-            self.trace_labels.append(obj)
-            self.gui.update()
+        Returns
+        -------
+        button: tkinter.Button
+        """
+        button = Button(master=master,
+                        text=text,
+                        command=command,
+                        fg=rgb_to_hex(self.default_fg),
+                        bg=rgb_to_hex(self.initial_bg),
+                        activebackground=rgb_to_hex(self.initial_bg),
+                        highlightthickness=2,
+                        highlightbackground='black',
+                        relief=RAISED,
+                        anchor=anchor,
+                        font=("Calibri {}".format(fontsize)))
+        return button
 
 
 def rgb_to_hex(rgb):
@@ -440,11 +434,15 @@ if __name__ == "__main__":
     _keyboard = Keyboard()
     _keyboard.build_keyboard(nuvox_standard_keyboard)
 
-    _model = TraceModel()
-    _model.load_model('/home/luka/PycharmProjects/nuvox/models/trace_models/11_01_2020_16_57_43')
+    _trace_model = TraceModel()
+    _trace_model.load_model('/home/luka/PycharmProjects/nuvox/models/trace_models/11_01_2020_16_57_43')
+
+    _language_model = GPT2()
+    _language_model.load_model('/home/luka/PycharmProjects/nuvox/models/language_models/distilled_gpt2')
 
     _display = Display(_keyboard, display_width=900, display_height=1200)
-    _display.set_trace_model(_model)
+    _display.set_trace_model(_trace_model)
+    _display.set_language_model(_language_model)
     _display.start_display()
 
 
