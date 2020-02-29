@@ -18,14 +18,16 @@ class GPT2:
         self.keras_model = None
 
         self.max_seq_len = 16
-        self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-        self.tokenizer.pad_token = '[PAD]'
-        self.tokenizer.decoder[self.tokenizer.pad_token_id] = self.tokenizer.pad_token
+
+        self.tokenizer = None  # set when load_model is called
 
         self.beam_width = 10
         self.top_phrases_so_far = ["."]   # list to store current most likely phrases in beam search
 
     def load_model(self, model_dir):
+        self.tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=model_dir)
+        self.tokenizer.pad_token = '[PAD]'
+        self.tokenizer.decoder[self.tokenizer.pad_token_id] = self.tokenizer.pad_token
         self.keras_model = TFGPT2LMHeadModel.from_pretrained(model_dir)
         self.get_phrase_probabilities('warm up')  # to prevent first real prediction being slow
         print('\n\n Finished loading pretrained model')
@@ -148,7 +150,8 @@ if __name__ == '__main__':
     """ testing"""
     _sentences = ['. Hello, what is your', '. Hello, what it your', '. Hello, what if your']
     _next_words = ['favourite', 'only', 'the']
-    model = GPT2()
-    model.beam_width = 3
-    model.top_phrases_so_far = _sentences
+    _language_model = GPT2()
+    _language_model.load_model('/home/luka/PycharmProjects/nuvox/models/language_models/distilled_gpt2')
+    _language_model.beam_width = 3
+    _language_model.top_phrases_so_far = _sentences
     print('stop here')

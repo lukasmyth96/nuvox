@@ -285,6 +285,7 @@ class Display:
             if key_object_in_focus.type in ['speak_button', 'delete_button', 'clear_button', 'exit_button', 'display_frame']:
                 widget_in_focus = self.key_id_to_widget[current_key_in_focus]
                 widget_in_focus.invoke()  # trigger click on this button
+
             elif key_object_in_focus.type == 'punctuation_key':
                 punctuation = key_object_in_focus.contents[0]
                 self.language_model.manually_add_word(word=punctuation, sep='')
