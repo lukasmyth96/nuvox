@@ -1,8 +1,9 @@
-
+import os
 import threading
 
-from mutagen.mp3 import MP3
 import pygame
+
+from definition import ROOT_DIR
 
 
 class SFX:
@@ -10,8 +11,8 @@ class SFX:
     def __init__(self):
 
         # TODO setup relative paths
-        self.click_on_mp3 = '/home/luka/PycharmProjects/nuvox/nuvox/resources/click_on.mp3'
-        self.click_off_mp3 = '/home/luka/PycharmProjects/nuvox/nuvox/resources/click_off.mp3'
+        self.click_on_mp3 = os.path.join(ROOT_DIR, 'nuvox', 'resources', 'click_on.mp3')
+        self.click_off_mp3 = os.path.join(ROOT_DIR, 'nuvox', 'resources', 'click_off.mp3')
 
     def button_click_sfx_in_new_thread(self, type='select'):
         """

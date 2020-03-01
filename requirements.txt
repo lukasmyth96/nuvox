@@ -1,6 +1,9 @@
 tensorflow-gpu==2.0.0rc0
 transformers
+gTTs
+pygame
 matplotlib
+mutagen
 tqdm
 pandas
 wordfreq

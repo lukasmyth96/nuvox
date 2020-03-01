@@ -1,10 +1,11 @@
 from collections import deque
+import os
 import time
 
+import numpy as np
 from tkinter import *
 
-import numpy as np
-
+from definition import ROOT_DIR
 import nuvox
 from nuvox.trace_model import TraceModel
 from nuvox.language_model import GPT2
@@ -178,7 +179,6 @@ class Display:
         time.sleep(0.3)
         label.destroy()
 
-
     def press_speak(self):
         top_phrase_widget = self.key_id_to_widget['display_box_0']
         top_phase = top_phrase_widget.cget('text')
@@ -351,7 +351,6 @@ class Display:
         new_hex = rgb_to_hex(self.initial_bg)
         widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
 
-
     def set_trace_model(self, model):
         """
         Set prediction model - carry out some checks on the model
@@ -380,13 +379,11 @@ class Display:
         model: nuvox.language_model.GPT2
         """
 
-
         if not isinstance(model, nuvox.language_model.GPT2):
             raise ValueError('Parameter: model must be an instance of nuvox.trace_model.TraceModel')
 
         self.language_model = model
         self.language_model.beam_width = self.beam_width
-
 
     def _create_button_object(self, master, text=None, command=None, anchor=CENTER, fontsize=18):
         """
@@ -427,7 +424,6 @@ def hex_to_rgb(hex):
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
-
 if __name__ == "__main__":
     """ Testing"""
     from nuvox.config.keyboard_config import nuvox_standard_keyboard, nuvox_qwerty_keyboard
@@ -437,12 +433,12 @@ if __name__ == "__main__":
     _keyboard.build_keyboard(nuvox_standard_keyboard)
 
     _trace_model = TraceModel()
-    _trace_model.load_model('/home/luka/PycharmProjects/nuvox/models/trace_models/11_01_2020_16_57_43')
+    _trace_model.load_model(model_dir=os.path.join(ROOT_DIR, 'models', 'trace_models', '11_01_2020_16_57_43'))
 
     _language_model = GPT2()
-    _language_model.load_model('/home/luka/PycharmProjects/nuvox/models/language_models/distilled_gpt2')
+    _language_model.load_model()  # by default the model will be loaded using the model name
 
-    _display = Display(_keyboard, display_width=900, display_height=1200)
+    _display = Display(_keyboard, display_width=450, display_height=600)
     _display.set_trace_model(_trace_model)
     _display.set_language_model(_language_model)
     _display.start_display()

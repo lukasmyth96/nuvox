@@ -24,11 +24,19 @@ class GPT2:
         self.beam_width = 10
         self.top_phrases_so_far = ["."]   # list to store current most likely phrases in beam search
 
-    def load_model(self, model_dir):
-        self.tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=model_dir)
+    def load_model(self, model_name_or_dir='distilgpt2'):
+        """
+        load model and tokenizer.
+        ----------
+        model_name_or_dir: str, optional
+            either local dir containing the tf_model.h5, vocab.json, config.json, merges.txt OR the model
+            shortcut name 'distilgpt2'
+        """
+
+        self.tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=model_name_or_dir)
         self.tokenizer.pad_token = '[PAD]'
         self.tokenizer.decoder[self.tokenizer.pad_token_id] = self.tokenizer.pad_token
-        self.keras_model = TFGPT2LMHeadModel.from_pretrained(model_dir)
+        self.keras_model = TFGPT2LMHeadModel.from_pretrained(model_name_or_dir)
         self.get_phrase_probabilities('warm up')  # to prevent first real prediction being slow
         print('\n\n Finished loading pretrained model')
 
@@ -148,10 +156,11 @@ class GPT2:
 
 if __name__ == '__main__':
     """ testing"""
-    _sentences = ['. Hello, what is your', '. Hello, what it your', '. Hello, what if your']
+    _sentences = ['. Hello, what is your']
     _next_words = ['favourite', 'only', 'the']
     _language_model = GPT2()
-    _language_model.load_model('/home/luka/PycharmProjects/nuvox/models/language_models/distilled_gpt2')
+    _language_model.load_model()
     _language_model.beam_width = 3
     _language_model.top_phrases_so_far = _sentences
+    _language_model.get_new_top_phrases(pred_words=_next_words)
     print('stop here')
