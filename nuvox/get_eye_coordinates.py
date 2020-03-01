@@ -66,6 +66,7 @@ def get_eye_coords_relative_to_screen():
 class NoGazeDataReturned(Exception):
     pass
 
+
 if __name__ == '__main__':
 
     c_file_path = os.path.join(ROOT_DIR, 'lib', 'Interaction_Streams_101.exe')

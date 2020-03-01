@@ -50,23 +50,24 @@ class Display:
         self.gui.attributes("-topmost", True)
 
         # For swype controls
-        self._current_key_in_focus = None  # track the id of the key currently in focus
-        self.duration_in_focus = 0.0  # track how long the current key has been in focus
+        self.current_key_in_focus = None  # track the id of the key currently in focus
         self.required_time_in_focus = 2.0  # number of ms a key has to be hovered on before record_mouse_trace is toggled
         self.interval_secs = 0.1
 
         # key timer keeps track of how long the current key has been in focus for
         self.key_timer = IntervalCallback(interval=self.interval_secs,
-                                          callback=self.on_every_interval_a_key_is_in_focus)
+                                          num_intervals=np.math.ceil(self.required_time_in_focus / self.interval_secs),
+                                          interval_callback=self.on_every_interval_a_key_is_in_focus,
+                                          completion_callback=self.on_single_key_in_focus_for_required_time)
         self.key_timer.start()
 
-        self._record_eye_trace = False  # Flag to keep track of whether mouse movements should be recorded currently
+        self.record_eye_trace = False  # Flag to keep track of whether mouse movements should be recorded currently
 
         # Controlling colours of keys
         self.default_fg = (255, 255, 255)
         self.initial_bg = (32, 32, 32)
         self.final_bg = (64, 0, 0)
-        number_colour_increments = int(self.required_time_in_focus / self.interval_secs)
+        number_colour_increments = np.math.ceil(self.required_time_in_focus / self.interval_secs)
         self.rgb_increment = tuple([int(val) for val in ((np.array(self.final_bg) - np.array(self.initial_bg)) / number_colour_increments)])
 
         # dict mapping key_id to TK object
@@ -79,27 +80,6 @@ class Display:
         self.trace_labels = []  # store label objects for trace
 
         self.build_display()
-
-    @property
-    def current_key_in_focus(self):
-        return self._current_key_in_focus
-
-    @current_key_in_focus.setter
-    def current_key_in_focus(self, value):
-        """ to ensure that duration is re-set to zero whenever key in focus changes"""
-        if value != self._current_key_in_focus:
-            self.duration_in_focus = 0.0
-        self._current_key_in_focus = value
-
-    @property
-    def record_eye_trace(self):
-        return self._record_eye_trace
-
-    @record_eye_trace.setter
-    def record_eye_trace(self, value):
-        # always reset the duration in focus when toggling the recording of eye trace
-        self.duration_in_focus = 0
-        self._record_eye_trace = value
 
     def build_display(self):
         """ Build gui from information in keyboard object"""
@@ -255,8 +235,8 @@ class Display:
 
     def exit(self):
         self.key_timer.cancel()
-        self.gaze_server_process.kill()
         self.gui.destroy()
+        self.gaze_server_process.kill()
 
     def change_key_in_focus(self, new_key_in_focus):
         """
@@ -267,6 +247,7 @@ class Display:
         new_key_in_focus: str
             key_id of the new key in focus
         """
+        self.key_timer.cancel()
 
         current_key_in_focus = self.current_key_in_focus
         # Reset the colour to default as we have left that key now
@@ -280,16 +261,15 @@ class Display:
         self.key_timer.restart()
 
     def on_single_key_in_focus_for_required_time(self):
-        """
-        Called by on_every_interval_a_key_is_in_focus() if duration of current key in focus >= self.required_time_in_focus
-        """
+
         self.key_timer.cancel()
-        self.duration_in_focus = 0.0
 
         current_key_in_focus = self.current_key_in_focus  # define here in case it changes during processing
 
         if current_key_in_focus is None:
+            self.key_timer.restart()
             return
+
         widget_in_focus = self.key_id_to_widget[current_key_in_focus]
         new_hex = rgb_to_hex(self.initial_bg)
         widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
@@ -298,8 +278,7 @@ class Display:
 
         # If mouse trace is currently being recorded then stop the trace, predict the intended word and then clear the trace
         if self.record_eye_trace:
-
-            self.record_eye_trace = False  # setter will reset duration to zero
+            self.record_eye_trace = False
             SFX().button_click_sfx_in_new_thread(type='unselect')  # play button unselect sound in new thread
             if self.mouse_trace_buffer:
                 self.change_border_colour(colour='black')
@@ -313,19 +292,16 @@ class Display:
 
             # If key in focus is a non-text key then we execute that buttons command but do NOT start trace recorded
             if key_object_in_focus.type in ['speak_button', 'delete_button', 'clear_button', 'exit_button', 'display_frame']:
-                self.duration_in_focus = 0.0
-                widget_in_focus = self.key_id_to_widget[current_key_in_focus]
                 widget_in_focus.invoke()  # trigger click on this button
 
             elif key_object_in_focus.type == 'punctuation_key':
-                self.duration_in_focus = 0.0
                 punctuation = key_object_in_focus.contents[0]
                 self.language_model.manually_add_word(word=punctuation, sep='')
                 updated_phrases = self.language_model.get_current_top_phrases()
                 self._set_display_phrases(updated_phrases)
 
             elif key_object_in_focus.type == 'text_key':
-                self.record_eye_trace = True  # setter will reset duration to zero
+                self.record_eye_trace = True
                 self.change_border_colour(colour='red')
                 print('Turning ON mouse recording')
             elif key_object_in_focus.type == 'null_key':
@@ -353,10 +329,6 @@ class Display:
                 - else darked the colour of the key and increment duration_in_focus
             - elif the key in focus has changed call change_key_in_focus()
            else if there are no keys in focus then call gaze_has_left_window()
-
-        Parameters
-        ----------
-        seconds_passed: float
         """
 
         # get current eye position relative to window
@@ -382,16 +354,10 @@ class Display:
 
                 # FIXME line below is a hack to account for the fact that the main timer finished before the periodic
                 # FIXME .. has time to send it's final callback
-
-                self.duration_in_focus += self.interval_secs  # increment duration in focus
-
-                if self.duration_in_focus >= self.required_time_in_focus:
-                    self.on_single_key_in_focus_for_required_time()
-                else:
-                    # darken colour of current key in focus
-                    current_hex = widget_in_focus.cget('bg')
-                    new_hex = rgb_to_hex(tuple(np.array(hex_to_rgb(current_hex)) + np.array(self.rgb_increment)))
-                    widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
+                # darken colour of current key in focus
+                current_hex = widget_in_focus.cget('bg')
+                new_hex = rgb_to_hex(tuple(np.array(hex_to_rgb(current_hex)) + np.array(self.rgb_increment)))
+                widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
 
             else:
                 self.change_key_in_focus(new_key_in_focus=keys_in_focus[0])
@@ -418,8 +384,6 @@ class Display:
             euclidean_dist = np.linalg.norm(np.array((relx, rely) - np.array((prev_coords))))
             if euclidean_dist > 0.05 or not self.mouse_trace_buffer:
                 self.mouse_trace_buffer.appendleft((relx, rely))
-
-                print('x={:.2f}, y={:.2f}'.format(relx, rely))
 
     def get_eye_coords_relative_to_window(self):
         """
@@ -468,8 +432,6 @@ class Display:
             raise (ValueError('model config must be set before predictions can be made'))
 
         self.trace_model = model
-
-        print('Available vocab words are: \n\n {}'.format(self.trace_model.config.VOCAB))
 
     def set_language_model(self, model):
         """
