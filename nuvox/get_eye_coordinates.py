@@ -12,12 +12,11 @@ from nuvox.timer_thread import MyTimer
 class FullScreenApp(object):
     def __init__(self, master, **kwargs):
         self.master = master
-        pad = 3
-        self.master.geometry("{}x{}".format(master.winfo_screenwidth() - pad, master.winfo_screenheight() - pad))
+        self.master.geometry("{}x{}".format(master.winfo_screenwidth(), master.winfo_screenheight()))
 
         self.canvas = Canvas(master=self.master,
-                             width=self.master.winfo_screenwidth()-pad,
-                             height=self.master.winfo_screenheight()-pad)
+                             width=self.master.winfo_screenwidth(),
+                             height=self.master.winfo_screenheight())
         self.canvas.pack()
         self.eye_width = 20
         self.eyes = self.canvas.create_rectangle(0, 0, self.eye_width, self.eye_width, fill="blue")
@@ -30,8 +29,8 @@ class FullScreenApp(object):
 
     def move_eyes(self, seconds_passed):
         x, y = get_eye_coords()
-        x = x / 2  # account for scaling issues
-        y = y / 2
+        x = x / 2 - 30  # account for scaling issues # TODO can I have my own calibration script
+        y = y / 2 - 45
         w = self.eye_width / 2
 
         print('After {} seconds the eyes are at:'.format(seconds_passed), x, y)
