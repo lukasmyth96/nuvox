@@ -30,6 +30,10 @@ class MyTimer():
             self.main_thread.cancel()
         self.lock.release()
 
+    def restart(self):
+        self.cancel()
+        self.start()
+
     def end(self):
         self.cancel()
         self.completion_callback()

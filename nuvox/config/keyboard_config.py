@@ -20,6 +20,30 @@ nuvox_standard_keyboard = [
     {'x1': 2/3, 'y1': 4/5, 'w': 1/3, 'h': 1/5, 'key_id': '12', 'contents': ['?'], 'type': 'punctuation_key'},
 ]
 
+nuvox_standard_keyboard_2 = [
+    {'x1': 0/3, 'y1': 0/25, 'w': 2/3, 'h': 1/25, 'key_id': 'display_box_0', 'contents': [], 'type': 'display_frame'},
+    {'x1': 0/3, 'y1': 1/25, 'w': 2/3, 'h': 1/25, 'key_id': 'display_box_1', 'contents': [], 'type': 'display_frame'},
+    {'x1': 0/3, 'y1': 2/25, 'w': 2/3, 'h': 1/25, 'key_id': 'display_box_2', 'contents': [], 'type': 'display_frame'},
+    {'x1': 0/3, 'y1': 3/25, 'w': 2/3, 'h': 1/25, 'key_id': 'display_box_3', 'contents': [], 'type': 'display_frame'},
+    {'x1': 0/3, 'y1': 4/25, 'w': 2/3, 'h': 1/25, 'key_id': 'display_box_4', 'contents': [], 'type': 'display_frame'},
+    {'x1': 6/9, 'y1': 0, 'w': 1/3, 'h': 1/10, 'key_id': 'speak_button', 'contents': ['speak'], 'type': 'speak_button'},
+    {'x1': 6/9, 'y1': 1/10, 'w': 1/9, 'h': 1/10, 'key_id': 'delete_button', 'contents': ['del'], 'type': 'delete_button'},
+    {'x1': 7/9, 'y1': 1/10, 'w': 1/9, 'h': 1/10, 'key_id': 'clear_button', 'contents': ['clr'], 'type': 'clear_button'},
+    {'x1': 8/9, 'y1': 1/10, 'w': 1/9, 'h': 1/10, 'key_id': 'exit_button', 'contents': ['X'], 'type': 'exit_button'},
+    {'x1': 0/3, 'y1': 1/5, 'w': 1/3, 'h': 1/5, 'key_id': '1', 'contents': ['a', 'b', 'c'], 'type': 'text_key'},
+    {'x1': 1/3, 'y1': 1/5, 'w': 1/3, 'h': 1/5, 'key_id': '2', 'contents': ['d', 'e', 'f'], 'type': 'text_key'},
+    {'x1': 2/3, 'y1': 1/5, 'w': 1/3, 'h': 1/5, 'key_id': '3', 'contents': ['g', 'h', 'i'], 'type': 'text_key'},
+    {'x1': 0/3, 'y1': 2/5, 'w': 1/3, 'h': 1/5, 'key_id': '4', 'contents': ['j', 'k', 'l'], 'type': 'text_key'},
+    {'x1': 1/3, 'y1': 2/5, 'w': 1/3, 'h': 1/5, 'key_id': '5', 'contents': [' '], 'type': 'null_key'},
+    {'x1': 2/3, 'y1': 2/5, 'w': 1/3, 'h': 1/5, 'key_id': '6', 'contents': ['m', 'n', 'o'], 'type': 'text_key'},
+    {'x1': 0/3, 'y1': 3/5, 'w': 1/3, 'h': 1/5, 'key_id': '7', 'contents': ['p', 'q', 'r', 's'], 'type': 'text_key'},
+    {'x1': 1/3, 'y1': 3/5, 'w': 1/3, 'h': 1/5, 'key_id': '8', 'contents': ['t', 'u', 'v'], 'type': 'text_key'},
+    {'x1': 2/3, 'y1': 3/5, 'w': 1/3, 'h': 1/5, 'key_id': '9', 'contents': ['w', 'x', 'y', 'z'], 'type': 'text_key'},
+    {'x1': 0/3, 'y1': 4/5, 'w': 1/3, 'h': 1/5, 'key_id': '10', 'contents': [','], 'type': 'punctuation_key'},
+    {'x1': 1/3, 'y1': 4/5, 'w': 1/3, 'h': 1/5, 'key_id': '11', 'contents': ['.'], 'type': 'punctuation_key'},
+    {'x1': 2/3, 'y1': 4/5, 'w': 1/3, 'h': 1/5, 'key_id': '12', 'contents': ['?'], 'type': 'punctuation_key'},
+]
+
 nuvox_qwerty_keyboard = [
     {'x1': 0/10, 'y1': 0/5, 'w': 7/10, 'h': 1/5, 'key_id': 'display_bar', 'contents': [], 'type': 'display'},
     {'x1': 7/10, 'y1': 0/5, 'w': 2/10, 'h': 1/5, 'key_id': 'enter_button', 'contents': ['del'], 'type': 'delete_button'},

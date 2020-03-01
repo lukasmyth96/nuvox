@@ -10,8 +10,11 @@ class TextToSpeech:
 
     def speak_text_in_new_thread(self, text):
 
-        th = threading.Thread(target=lambda: self.speak_text(text))
-        th.start()
+        if text:
+            th = threading.Thread(target=lambda: self.speak_text(text))
+            th.start()
+        else:
+            return
 
     def speak_text(self, text):
 

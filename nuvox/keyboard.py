@@ -96,7 +96,6 @@ class Keyboard:
         elif not matching_keys_list:
             raise ValueError('Found no key at point ({:.1f}, {:.1f})'.format(x, y))
 
-
     def get_discrete_representation(self, text, skip_spacekey=True):
         """ Get the discrete representation of the trace for a given text, that is a list containing the key_id's
         for the sequence of keys that must be traversed for the given text

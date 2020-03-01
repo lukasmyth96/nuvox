@@ -1,18 +1,17 @@
 import ast
 import requests
 import subprocess
-from subprocess import check_output
-import time
 import os
 from tkinter import *
 
+from definition import ROOT_DIR
 from nuvox.timer_thread import MyTimer
 
 
 class FullScreenApp(object):
     def __init__(self, master, **kwargs):
         self.master = master
-        self.master.geometry("{}x{}".format(master.winfo_screenwidth(), master.winfo_screenheight()))
+        self.master.geometry("450x600")
 
         self.canvas = Canvas(master=self.master,
                              width=self.master.winfo_screenwidth(),
@@ -28,34 +27,48 @@ class FullScreenApp(object):
         self.timer.start()
 
     def move_eyes(self, seconds_passed):
-        x, y = get_eye_coords()
-        x = x / 2 - 30  # account for scaling issues # TODO can I have my own calibration script
-        y = y / 2 - 45
+        screen_relx, screen_rely = get_eye_coords_relative_to_screen()  # get relative x y to screen
+
+        window_x = (screen_relx * self.master.winfo_screenwidth() - self.master.winfo_x())
+        window_y = (screen_rely * self.master.winfo_height() - self.master.winfo_y())
+
         w = self.eye_width / 2
 
-        print('After {} seconds the eyes are at:'.format(seconds_passed), x, y)
-        self.canvas.coords(self.eyes, x-w, y-w, x+w, y+w)  # so that the blob is centered on the eye rather than top left
+        print('After {} seconds the eyes are at:'.format(seconds_passed), window_x, window_y)
+        self.canvas.coords(self.eyes, window_x-w, window_y-w, window_x+w, window_y+w)  # so that the blob is centered on the eye rather than top left
 
 
-def get_eye_coords():
+def get_eye_coords_relative_to_screen():
     """
-    Get current eye coords
+    Get current eye coords relative to entire screen
     Returns
     -------
-    x: float
-    y: float
+    relx: float
+        x coordinate relative to entire screen e.g. 0.5 means looking half way accross screen
+    rely: float
+
+    Raises
+    ------
+    NoGazeDataReturned: if no gaze data is returned
     """
     response = requests.get(url='http://localhost:3070')
     coords_string = response.content.decode('utf-8')
-    coords_dict = ast.literal_eval(coords_string)
-    x = coords_dict['X']
-    y = coords_dict['Y']
-    return x, y
 
+    if coords_string == 'null':
+        raise NoGazeDataReturned
+
+    coords_dict = ast.literal_eval(coords_string)
+    relx = coords_dict['X'] / coords_dict['ViewportWidth']
+    rely = coords_dict['Y'] / coords_dict['ViewportHeight']
+    return relx, rely
+
+
+class NoGazeDataReturned(Exception):
+    pass
 
 if __name__ == '__main__':
 
-    c_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib', 'Interaction_Streams_101.exe')
+    c_file_path = os.path.join(ROOT_DIR, 'lib', 'Interaction_Streams_101.exe')
     subprocess.Popen(c_file_path)
     root = Tk()
     app = FullScreenApp(root)

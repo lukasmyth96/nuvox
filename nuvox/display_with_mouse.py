@@ -49,11 +49,12 @@ class Display:
         self.gui.bind('<Motion>', self.record_mouse_position)
         self.current_key_in_focus = None  # track the id of the key currently in focus
         self.required_time_in_focus = 0.7  # number of ms a key has to be hovered on before record_mouse_trace is toggled
-        self.interval_secs = 0.1
+        self.interval_secs = 0.05
         self.timer = MyTimer(self.required_time_in_focus,
                              self.interval_secs,
                              self.on_single_key_in_focus_for_required_time,
                              self.on_every_second_a_key_is_in_focus)
+        self.timer.start()
         self.record_mouse_trace = False  # Flag to keep track of whether mouse movements should be recorded currently
 
         # Controlling colours of keys
@@ -264,6 +265,10 @@ class Display:
     def on_single_key_in_focus_for_required_time(self):
 
         current_key_in_focus = self.current_key_in_focus  # define here in case it changes
+
+        if current_key_in_focus is None:
+            return
+
         key_object_in_focus = self.key_id_to_key_object[current_key_in_focus]
 
         # If mouse trace is currently being recorded then stop the trace, predict the intended word and then clear the trace
