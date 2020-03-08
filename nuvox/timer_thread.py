@@ -28,10 +28,12 @@ class MyTimer():
         if self.main_timer_running:
             self.main_timer_running = False
             self.main_thread.cancel()
+            self.seconds_passed = 0
         self.lock.release()
 
     def restart(self):
         self.cancel()
+        self.main_thread = Timer(self.timeout_secs, self.end)
         self.start()
 
     def end(self):
@@ -44,7 +46,7 @@ class MyTimer():
         if self.main_timer_running:
             if self.periodic_timer_running:
                 self.seconds_passed += self.interval_secs
-                self.interval_callback(self.seconds_passed)
+                self.interval_callback()
             else:
                 self.periodic_timer_running = True
 

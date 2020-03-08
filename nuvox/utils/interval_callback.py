@@ -27,12 +27,14 @@ class IntervalCallback():
 
     def call_callback(self):
         self.count += 1
-        if self.count == self.num_intervals:
-            self.completion_callback()
-        else:
+        if self.count < self.num_intervals:
             self.interval_callback()
             self.thread = Timer(self.interval, self.call_callback)
             self.thread.start()
+        elif self.count == self.num_intervals:
+            self.completion_callback()
+        else:
+            self.cancel()
 
     def start(self):
         self.thread.start()

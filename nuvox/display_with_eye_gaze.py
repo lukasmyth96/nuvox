@@ -45,7 +45,7 @@ class Display:
         self.gui = Tk()
         self.gui.configure(background="steel blue")
         self.gui.title("nuvox keyboard")
-        self.gui.geometry("{}x{}+{}+{}".format(self.display_width, self.display_height, 250, 50))
+        self.gui.geometry("{}x{}+{}+{}".format(self.display_width, self.display_height, 360, 50))
         self.gui.resizable(width=False, height=False)
         self.gui.attributes("-topmost", True)
 
@@ -57,8 +57,8 @@ class Display:
         # key timer keeps track of how long the current key has been in focus for
         self.key_timer = IntervalCallback(interval=self.interval_secs,
                                           num_intervals=np.math.ceil(self.required_time_in_focus / self.interval_secs),
-                                          interval_callback=self.on_every_interval_a_key_is_in_focus,
-                                          completion_callback=self.on_single_key_in_focus_for_required_time)
+                                          completion_callback=self.on_single_key_in_focus_for_required_time,
+                                          interval_callback=self.on_every_interval_a_key_is_in_focus)
         self.key_timer.start()
 
         self.record_eye_trace = False  # Flag to keep track of whether mouse movements should be recorded currently
@@ -258,6 +258,7 @@ class Display:
         # If statement prevents timer restarting on same key after word is predicted
         print('Current key in focus is {} - New key in focus is {}'.format(current_key_in_focus, new_key_in_focus))
         self.current_key_in_focus = new_key_in_focus
+
         self.key_timer.restart()
 
     def on_single_key_in_focus_for_required_time(self):

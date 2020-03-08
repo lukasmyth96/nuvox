@@ -5,6 +5,8 @@ from gtts import gTTS
 from mutagen.mp3 import MP3
 import pygame
 
+from definition import ROOT_DIR
+
 
 class TextToSpeech:
 
@@ -41,8 +43,10 @@ class TextToSpeech:
             path to mp3 file
         """
 
-        # dir to save auido files
-        audo_file_dir = '/home/luka/Documents/nuvox/tts_samples'
+        # dir to save audio files
+        audo_file_dir = os.path.join(ROOT_DIR, 'tts_samples')
+        if not os.path.isdir(audo_file_dir):
+            os.mkdir(audo_file_dir)
 
         tts = gTTS(text=text, lang='en', slow=False)
         words = text.lower().split(' ')

@@ -40,7 +40,6 @@ class GPT2:
         self.get_phrase_probabilities('warm up')  # to prevent first real prediction being slow
         print('\n\n Finished loading pretrained model')
 
-
     def _encode(self, text):
         """ encode single string of text"""
 
