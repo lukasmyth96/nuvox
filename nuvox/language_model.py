@@ -125,7 +125,6 @@ class GPT2:
 
         self.top_phrases_so_far = [phrases_to_query[idx] for idx in top_phrase_indices]
 
-
         top_phrases = [phrase.lstrip('. ') for phrase in self.top_phrases_so_far]
         print('New top phrases are: ', top_phrases)
 

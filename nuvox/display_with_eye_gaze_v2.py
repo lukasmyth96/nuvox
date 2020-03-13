@@ -5,13 +5,13 @@ import time
 
 import numpy as np
 from tkinter import *
+from tkinter import ttk
 
 from definition import ROOT_DIR
 import nuvox
-from nuvox.trace_model import TraceModel
+from nuvox.key_trace_model import KeyTraceModel
 from nuvox.language_model import GPT2
 from nuvox.utils.text_to_speech import TextToSpeech
-from nuvox.utils.sound_effects import SFX
 from nuvox.utils.interval_callback import IntervalCallback
 from nuvox.get_eye_coordinates import get_eye_coords_relative_to_screen, NoGazeDataReturned
 
@@ -36,7 +36,6 @@ class Display:
         self.display_width = display_width
         self.display_height = display_height
 
-        self.trace_model = None
         self.language_model = None
         self.beam_width = 5
 
@@ -64,9 +63,10 @@ class Display:
         self.record_eye_trace = False  # Flag to keep track of whether mouse movements should be recorded currently
 
         # Controlling colours of keys
-        self.default_fg = (255, 255, 255)
-        self.initial_bg = (32, 32, 32)
-        self.final_bg = (64, 0, 0)
+        self.default_fg = (255, 255, 255)  # black text
+        self.initial_bg = (32, 32, 32)  # grey
+        self.final_bg = (64, 0, 0)  # red
+        self.active_bg = (0, 100, 0)  # green
         number_colour_increments = np.math.ceil(self.required_time_in_focus / self.interval_secs)
         self.rgb_increment = tuple([int(val) for val in ((np.array(self.final_bg) - np.array(self.initial_bg)) / number_colour_increments)])
 
@@ -76,8 +76,9 @@ class Display:
         # dict mapping key_id to nuvox.keyboard.Key object
         self.key_id_to_key_object = {}
 
-        self.mouse_trace_buffer = deque(maxlen=200)  # store coordinates of mouse in buffer of fixed length
-        self.keys_in_focus = deque(maxlen=200)  # keep track of the keys in focus
+        # keep track of the keys in focus during the swype
+        self.key_trace_model = KeyTraceModel()
+        self.key_trace = list()  # keep track of the keys in focus
 
         self.build_display()
 
@@ -124,17 +125,16 @@ class Display:
         self.gui.mainloop()
 
     def predict_on_trace(self):
-        """ run prediction on trace currently held in buffer and add predicted text to the displayed text"""
-        mouse_trace = self.mouse_trace_buffer.copy()
-        mouse_trace.reverse()  # to put list in chronological order
 
-        possible_words = self.trace_model.predict(mouse_trace, beam_width=self.beam_width)
+        possible_words = self.key_trace_model.get_possible_words(self.key_trace)
+        print('')
+
         if not possible_words:
             print('Trace model returned no possible words - try again')
             return False
 
         possible_words = possible_words[:self.beam_width]
-        print('top {} possible words are: {}'.format(self.beam_width, possible_words))
+        print('top possible words are: ', possible_words)
 
         # Capitalize first word in new sentence
         current_phrases = self._get_current_display_phrases()
@@ -231,8 +231,7 @@ class Display:
         return phrases
 
     def clear_trace_buffer(self):
-        self.mouse_trace_buffer.clear()
-        self.keys_in_focus.clear()
+        self.key_trace.clear()
 
     def exit(self):
         self.key_timer.cancel()
@@ -273,26 +272,25 @@ class Display:
             return
 
         widget_in_focus = self.key_id_to_widget[current_key_in_focus]
-        new_hex = rgb_to_hex(self.initial_bg)
-        widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
-
         key_object_in_focus = self.key_id_to_key_object[current_key_in_focus]
 
         # If mouse trace is currently being recorded then stop the trace, predict the intended word and then clear the trace
         if self.record_eye_trace:
             self.record_eye_trace = False
-            if self.mouse_trace_buffer:
-                self.change_border_colour(colour='black')
+            new_hex = rgb_to_hex(self.initial_bg)
+            widget_in_focus.configure(bg=new_hex, activebackground=new_hex)  # reset key to black
+            if self.key_trace:
                 if key_object_in_focus.type == 'text_key':
                     self.predict_on_trace()  # this function calls the prediction
                     self.show_top_pred_word_popup(current_key_in_focus)
 
-                print('keys in focus were', self.keys_in_focus)
+                print('keys in focus were', self.key_trace)
                 self.clear_trace_buffer()  # clear trace ready for next swype
 
-            SFX().button_click_sfx_in_new_thread(type='unselect')  # play button unselect sound in new thread
-
         else:  # mouse trace is NOT currently being recorded
+
+            new_hex = rgb_to_hex(self.active_bg)
+            widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
 
             # If key in focus is a non-text key then we execute that buttons command but do NOT start trace recorded
             if key_object_in_focus.type in ['speak_button', 'delete_button', 'clear_button', 'exit_button', 'display_frame']:
@@ -306,22 +304,13 @@ class Display:
 
             elif key_object_in_focus.type == 'text_key':
                 self.record_eye_trace = True
-                self.change_border_colour(colour='red')
                 print('Turning ON mouse recording')
             elif key_object_in_focus.type == 'null_key':
                 pass
             else:
                 raise ValueError('Unknown key type')
 
-            SFX().button_click_sfx_in_new_thread(type='select')  # play button unselect sound in new thread
-
         self.key_timer.restart()
-
-    def change_border_colour(self, colour='red'):
-        """ Change border colour"""
-        for widget in self.key_id_to_widget.values():
-            widget.configure(highlightbackground=colour)
-        self.gui.update()
 
     def on_every_interval_a_key_is_in_focus(self):
         """
@@ -349,9 +338,8 @@ class Display:
         keys_in_focus = self.keyboard.get_key_ids_at_point(x=relx, y=rely)
 
         # Add current eye position to buffer if trace recording is currently ON
-        if self.record_eye_trace:
-            self.add_current_eye_position_to_buffer(relx, rely)
-            self.keys_in_focus.append(keys_in_focus)
+        if self.record_eye_trace and keys_in_focus:
+            self.key_trace.append(keys_in_focus[0])
 
         if keys_in_focus:
 
@@ -359,38 +347,17 @@ class Display:
                 # if key in focus hasn't changed then darken the current key in focus
                 widget_in_focus = self.key_id_to_widget.get(self.current_key_in_focus)
 
-                # FIXME line below is a hack to account for the fact that the main timer finished before the periodic
-                # FIXME .. has time to send it's final callback
                 # darken colour of current key in focus
                 current_hex = widget_in_focus.cget('bg')
-                new_hex = rgb_to_hex(tuple(np.array(hex_to_rgb(current_hex)) + np.array(self.rgb_increment)))
-                widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
+                if current_hex not in [rgb_to_hex(self.final_bg), rgb_to_hex(self.active_bg)]:
+                    new_hex = rgb_to_hex(tuple(np.array(hex_to_rgb(current_hex)) + np.array(self.rgb_increment)))
+                    widget_in_focus.configure(bg=new_hex, activebackground=new_hex)
 
             else:
                 self.change_key_in_focus(new_key_in_focus=keys_in_focus[0])
 
         else:
             self.gaze_has_left_window()  # resets colour of last key in focus and sets current_key_in_focus to None
-
-    def add_current_eye_position_to_buffer(self, relx, rely):
-        """
-        Add the current gaze position to the trace buffer
-
-        Parameters
-        ---------
-        relx: float
-            current x coords relative to window - e.g. relx=0.5 means gaze is 50% across window horizontally
-        rely: float
-        """
-
-        # append coordinate to buffer only if euclidean distance exceeds minimum delta
-        if not self.mouse_trace_buffer:
-            self.mouse_trace_buffer.appendleft((relx, rely))  # if buffer is empty add first point
-        else:
-            prev_coords = self.mouse_trace_buffer[0]
-            euclidean_dist = np.linalg.norm(np.array((relx, rely) - np.array((prev_coords))))
-            if euclidean_dist > 0.05 or not self.mouse_trace_buffer:
-                self.mouse_trace_buffer.appendleft((relx, rely))
 
     def get_eye_coords_relative_to_window(self):
         """
@@ -422,24 +389,6 @@ class Display:
 
         self.current_key_in_focus = None
 
-    def set_trace_model(self, model):
-        """
-        Set prediction model - carry out some checks on the model
-        Parameters
-        ----------
-        model: nuvox.trace_model.TraceModel
-        """
-
-        # TODO will need some way of checking that the models keyboard is the same as the one set for display
-
-        if not isinstance(model, nuvox.trace_model.TraceModel):
-            raise ValueError('Parameter: model must be an instance of nuvox.trace_model.TraceModel')
-
-        if model.config is None:
-            raise (ValueError('model config must be set before predictions can be made'))
-
-        self.trace_model = model
-
     def set_language_model(self, model):
         """
         Set prediction model - carry out some checks on the model
@@ -449,7 +398,7 @@ class Display:
         """
 
         if not isinstance(model, nuvox.language_model.GPT2):
-            raise ValueError('Parameter: model must be an instance of nuvox.trace_model.TraceModel')
+            raise ValueError
 
         self.language_model = model
         self.language_model.beam_width = self.beam_width
@@ -473,9 +422,7 @@ class Display:
                         fg=rgb_to_hex(self.default_fg),
                         bg=rgb_to_hex(self.initial_bg),
                         activebackground=rgb_to_hex(self.initial_bg),
-                        highlightthickness=2,
-                        highlightbackground='black',
-                        relief=RAISED,
+                        borderwidth=5,
                         anchor=anchor,
                         font=("Calibri {}".format(fontsize)))
         return button
@@ -493,6 +440,7 @@ def hex_to_rgb(hex):
     h = hex.lstrip('#')
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
+
 if __name__ == "__main__":
     """ Testing"""
     from nuvox.config.keyboard_config import nuvox_standard_keyboard, nuvox_standard_keyboard_2
@@ -501,14 +449,10 @@ if __name__ == "__main__":
     _keyboard = Keyboard()
     _keyboard.build_keyboard(nuvox_standard_keyboard_2)
 
-    _trace_model = TraceModel()
-    _trace_model.load_model(model_dir=os.path.join(ROOT_DIR, 'models', 'trace_models', '11_01_2020_16_57_43'))
-
     _language_model = GPT2()
     _language_model.load_model()  # by default the model will be loaded using the model name
 
     _display = Display(_keyboard, display_width=450, display_height=600)
-    _display.set_trace_model(_trace_model)
     _display.set_language_model(_language_model)
     _display.start_display()
 
