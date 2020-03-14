@@ -1,10 +1,9 @@
 from matplotlib import pyplot as plt
-from tqdm import tqdm
 
 from nuvox.config.keyboard_config import nuvox_standard_keyboard
-from nuvox.keyboard import Keyboard
+from nuvox.legacy.keyboard import Keyboard
 
-from nuvox.dataset import Dataset, get_dataset_of_top_n_words
+from nuvox.dataset import get_dataset_of_top_n_words
 
 
 def get_theoretical_max_accuracy(keyboard, wordlist):
