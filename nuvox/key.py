@@ -2,7 +2,7 @@
 
 class Key:
 
-    def __init__(self, x1, y1, w, h, key_id, contents):
+    def __init__(self, x1, y1, w, h, key_id, contents, widget_type):
         """
         Base class for all keys
         Parameters
@@ -13,12 +13,15 @@ class Key:
         h: float
         key_id: str
         contents: list[str]
+        widget_type: str
+            'text', 'button' or 'display'
         """
         self.x1, self.y1 = x1, y1
         self.x2, self.y2 = x1 + w, y1 + h
         self.w, self.h = w, h
         self.key_id = key_id
         self.contents = contents
+        self.widget_type = widget_type
 
         self._verify_input()
 
@@ -33,7 +36,7 @@ class Key:
         ----------
         other: nuvox.key.Key
         """
-        return not (self.x2 <= other.x1) or (self.x1 >= other.x2) or (self.y1 <= other.y2) or (self.y2 >= other.y1)
+        return not ((self.x2 <= other.x1) or (self.x1 >= other.x2) or (self.y1 <= other.y2) or (self.y2 >= other.y1))
 
     def _verify_input(self):
 

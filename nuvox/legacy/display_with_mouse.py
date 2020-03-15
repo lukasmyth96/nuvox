@@ -431,14 +431,14 @@ def hex_to_rgb(hex):
 
 if __name__ == "__main__":
     """ Testing"""
-    from nuvox.config.keyboard_config import nuvox_standard_keyboard
+    from nuvox.config.config import nuvox_standard_keyboard
     from nuvox.legacy.keyboard import Keyboard
 
     _keyboard = Keyboard()
     _keyboard.build_keyboard(nuvox_standard_keyboard)
 
     _trace_model = TraceModel()
-    _trace_model.load_model(model_dir=os.path.join(ROOT_DIR, 'models', 'trace_models', '11_01_2020_16_57_43'))
+    _trace_model._initialise_model(model_dir=os.path.join(ROOT_DIR, 'models', 'trace_models', '11_01_2020_16_57_43'))
 
     _language_model = GPT2()
     _language_model.load_model()  # by default the model will be loaded using the model name

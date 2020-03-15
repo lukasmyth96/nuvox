@@ -1,9 +1,6 @@
 import itertools
-from pprint import pprint
 
-import numpy as np
-
-from nuvox.config.keyboard_config import required_key_attributes, nuvox_standard_keyboard
+from nuvox.config.config import required_key_attributes, nuvox_standard_keyboard
 from nuvox.utils.intersection_over_union import get_iou
 from nuvox.trace_builder import get_random_trace
 

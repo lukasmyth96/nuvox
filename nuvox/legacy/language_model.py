@@ -1,9 +1,7 @@
 import itertools
-import math
 
 import numpy as np
 
-import tensorflow as tf
 from tensorflow.keras.layers import Softmax
 
 from transformers import (TFGPT2LMHeadModel, GPT2Tokenizer)
@@ -78,7 +76,7 @@ class GPT2:
 
             combined_probs = {}  # dict mapping each word in phrase to the probability that it would appear
             token_ids = batch[sentence_idx]
-            idx_of_last_non_pad = np.argmin(token_ids != self.tokenizer.pad_token_id) -1
+            idx_of_last_non_pad = np.argmin(token_ids != self.tokenizer.pad_token_id) - 1
 
             for token_idx in range(idx_of_last_non_pad):  # skipping first because will be a fullstop
                 logits = pred[0][sentence_idx][token_idx]

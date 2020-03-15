@@ -7,7 +7,7 @@ from tkinter import *
 
 from definition import ROOT_DIR
 import nuvox
-from nuvox.legacy.key_trace_model import KeyTraceModel
+from nuvox.services.trace_algorithm import TraceAlgorithm
 from nuvox.legacy.language_model import GPT2
 from nuvox.utils.text_to_speech import TextToSpeech
 from nuvox.utils.interval_callback import IntervalCallback
@@ -75,7 +75,7 @@ class Display:
         self.key_id_to_key_object = {}
 
         # keep track of the keys in focus during the swype
-        self.key_trace_model = KeyTraceModel()
+        self.key_trace_model = TraceAlgorithm()
         self.key_trace = list()  # keep track of the keys in focus
 
         self.build_display()
@@ -441,7 +441,7 @@ def hex_to_rgb(hex):
 
 if __name__ == "__main__":
     """ Testing"""
-    from nuvox.config.keyboard_config import nuvox_standard_keyboard_2
+    from nuvox.config.config import nuvox_standard_keyboard_2
     from nuvox.legacy.keyboard import Keyboard
 
     _keyboard = Keyboard()

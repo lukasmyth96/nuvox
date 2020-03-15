@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 
-from nuvox.config.keyboard_config import nuvox_standard_keyboard
+from nuvox.config.config import nuvox_standard_keyboard
 from nuvox.legacy.keyboard import Keyboard
 
 from nuvox.dataset import get_dataset_of_top_n_words
