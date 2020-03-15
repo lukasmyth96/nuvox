@@ -49,6 +49,9 @@ class GPT2:
 
         potential_word_tokens = [self.tokenizer.encode(word) for word in potential_words]
 
+        if not prompt:
+            prompt = '.'  # model cannot predict on empty string
+
         prompt_tokens = self.tokenizer.encode(prompt)
         initial_pred, past = self.keras_model(np.array(prompt_tokens), past=None)
         softmax_vector = softmax(initial_pred[..., -1, :]).numpy()  # gives probabilities for next token

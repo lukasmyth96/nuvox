@@ -17,22 +17,22 @@ class Config:
     FORCE_ON_TOP = True
 
     # swype settings
-    REQ_DWELL_TIME = 2.0  # seconds required to start/stop a swype
+    REQ_DWELL_TIME = 1  # seconds required to start/stop a swype
     GAZE_INTERVAL = 0.1  # seconds between consecutive sampling of the gaze position
 
     # predictive text
-    VOCAB_PATH = os.path.join(ROOT_DIR, 'config', 'discrete_representation_to_words.pkl')  # TODO compute this on fly
+    VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'config', 'discrete_representation_to_words.pkl')  # TODO compute this on fly
+    MAX_POTENTIAL_WORDS = 5
+    PRED_FLASH_DURATION = 0.5
 
     # eye gaze server
     GAZE_SERVER_HOST = 'http://localhost:3070'
     EXE_PATH = os.path.join(ROOT_DIR, 'lib', 'Interaction_Streams_101.exe')
 
-    # Audio
-    TTS_SAMPLES_DIR = os.path.join(ROOT_DIR, 'tts_samples')
-
     # key settings
     FONT = 'calibri'
-    FONT_SIZE = 10
+    BUTTON_FONT_SIZE = 18
+    DISPLAY_FONT_SIZE = 12
     JUSTIFY = 'center'
     TEXT_COLOUR = (255, 255, 255)
     DEFAULT_BG = (32, 32, 32)  # default colour of key

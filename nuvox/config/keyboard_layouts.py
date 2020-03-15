@@ -2,11 +2,14 @@ from nuvox.key import Key
 
 #
 
-nuvox_standard_keyboard = [Key(x1=0/3, y1=0/3, w=2/3, h=1/5, key_id='display', contents=[], widget_type='text'),
-                           Key(x1=6/9, y1=0/3, w=1/3, h=1/10, key_id='speak', contents=['speak']),
-                           Key(x1=6/9, y1=1/9, w=1/9, h=1/10, key_id='delete', contents=['del']),
-                           Key(x1=7/9, y1=1/9, w=1/9, h=1/10, key_id='clear', contents=['clr']),
-                           Key(x1=8/9, y1=1/9, w=1/9, h=1/10, key_id='exit', contents=['X']),
+nuvox_standard_keyboard = [Key(x1=0/3, y1=0/25, w=2/3, h=1/10, key_id='display', contents=[], widget_type='text'),
+                           Key(x1=0/9, y1=1/10, w=2/9, h=1/10, key_id='suggestion_1', contents=['']),
+                           Key(x1=2/9, y1=1/10, w=2/9, h=1/10, key_id='suggestion_2', contents=['']),
+                           Key(x1=4/9, y1=1/10, w=2/9, h=1/10, key_id='suggestion_3', contents=['']),
+                           Key(x1=6/9, y1=0/5, w=1/3, h=1/10, key_id='speak', contents=['speak']),
+                           Key(x1=6/9, y1=1/10, w=1/9, h=1/10, key_id='delete', contents=['del']),
+                           Key(x1=7/9, y1=1/10, w=1/9, h=1/10, key_id='clear', contents=['clr']),
+                           Key(x1=8/9, y1=1/10, w=1/9, h=1/10, key_id='exit', contents=['X']),
                            Key(x1=0/3, y1=1/5, w=1/3, h=1/5, key_id='1', contents=['a', 'b', 'c']),
                            Key(x1=1/3, y1=1/5, w=1/3, h=1/5, key_id='2', contents=['d', 'e', 'f']),
                            Key(x1=2/3, y1=1/5, w=1/3, h=1/5, key_id='3', contents=['g', 'h', 'i']),
