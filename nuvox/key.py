@@ -2,7 +2,7 @@
 
 class Key:
 
-    def __init__(self, x1, y1, w, h, key_id, contents, widget_type):
+    def __init__(self, x1, y1, w, h, key_id, contents, widget_type='button'):
         """
         Base class for all keys
         Parameters
@@ -14,7 +14,7 @@ class Key:
         key_id: str
         contents: list[str]
         widget_type: str
-            'text', 'button' or 'display'
+            'display', 'button'
         """
         self.x1, self.y1 = x1, y1
         self.x2, self.y2 = x1 + w, y1 + h
@@ -25,7 +25,7 @@ class Key:
 
         self._verify_input()
 
-    def is_point_within_key(self, x, y):
+    def contains_point(self, x, y):
         """ Returns True if (x, y) is within bounds of key - otherwise False"""
         return (self.x1 <= x <= self.x2) and (self.y1 <= y <= self.y2)
 

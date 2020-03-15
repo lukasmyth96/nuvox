@@ -27,13 +27,16 @@ class Config:
     GAZE_SERVER_HOST = 'http://localhost:3070'
     EXE_PATH = os.path.join(ROOT_DIR, 'lib', 'Interaction_Streams_101.exe')
 
+    # Audio
+    TTS_SAMPLES_DIR = os.path.join(ROOT_DIR, 'tts_samples')
+
     # key settings
     FONT = 'calibri'
     FONT_SIZE = 10
     JUSTIFY = 'center'
     TEXT_COLOUR = (255, 255, 255)
-    BG_COLOUR = (32, 32, 32)  # default colour of key
-    HIGHLIGHT_COLOUR = (64, 0, 0)  # colour when key is fully selected
+    DEFAULT_BG = (32, 32, 32)  # default colour of key
+    HIGHLIGHT_BG = (64, 0, 0)  # colour when key is fully selected
     START_KEY_COLOUR = (0, 100, 0)  # colour start key flashes to indicate start of a swype
 
 

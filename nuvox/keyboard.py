@@ -13,6 +13,10 @@ class Keyboard:
         self.key_id_to_key = {}
         self._build_keyboard(key_list)
 
+    @property
+    def keys(self):
+        return list(self.key_id_to_key.values())
+
     def _build_keyboard(self, key_list):
         """
         Parameters
@@ -22,7 +26,7 @@ class Keyboard:
         self.key_id_to_key = {key.key_id: key for key in key_list}
         self._check_for_overlaps()
 
-    def get_key_ids_at_point(self, x, y):
+    def get_key_at_point(self, x, y):
         """
         Returns list of key ids for keys at a given point - can be two if point is right on border
         Parameters
@@ -32,16 +36,16 @@ class Keyboard:
 
         Returns
         -------
-        key_ids: list[str]
+        key: nuvox.key.Key
+            returns None if no key at point
         """
-        return [key_id for key_id, key in self.key_id_to_key.items() if key.is_point_within_key(x, y)]
+        return next((key for key in self.keys if key.contains_point(x, y)), None)
 
     def _check_for_overlaps(self):
         """
         Check if any of the keys overlap with each other - Raises ValueError if they do.
         """
-        keys = list(self.key_id_to_key.values())
-        for key_a, key_b in itertools.combinations(keys, 2):
+        for key_a, key_b in itertools.combinations(self.keys, 2):
             if key_a.intersects(key_b):
                 raise ValueError('Keys: {} and {} overlap'.format(key_a.key_id, key_b.key_id))
 

@@ -21,11 +21,12 @@ class EyeGazeServer:
         """
         self.host = host
         self.exe_path = exe_path
+        self.process = None
 
     def start_server(self):
-        subprocess.Popen(self.exe_path)
+        self.process = subprocess.Popen(self.exe_path)
 
-    def get_eye_coords_relative_to_screen(self):
+    def get_gaze_relative_to_screen(self):
         """
         Returns current eye coords x, y relative to entire screen
         Returns

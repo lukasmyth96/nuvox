@@ -1,6 +1,8 @@
 from nuvox.key import Key
 
-nuvox_standard_keyboard = [Key(x1=0/3, y1=0, w=2/3, h=1/5, key_id='display', contents=[]),
+#
+
+nuvox_standard_keyboard = [Key(x1=0/3, y1=0, w=2/3, h=1/5, key_id='display', contents=[], widget_type='text'),
                            Key(x1=6/9, y1=0, w=1/3, h=1/10, key_id='speak', contents=['speak']),
                            Key(x1=6/9, y1=1/9, w=2/3, h=1/10, key_id='delete', contents=['del']),
                            Key(x1=7/9, y1=1/9, w=2/3, h=1/10, key_id='clear', contents=['clr']),
