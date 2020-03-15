@@ -49,3 +49,9 @@ class Keyboard:
             if key_a.intersects(key_b):
                 raise ValueError('Keys: {} and {} overlap'.format(key_a.key_id, key_b.key_id))
 
+
+if __name__ == '__main__':
+    """ testing """
+    from nuvox.config.keyboard_layouts import nuvox_standard_keyboard
+    _keyboard = Keyboard(key_list=nuvox_standard_keyboard)
+    print('stop here')

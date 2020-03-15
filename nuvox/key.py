@@ -23,7 +23,15 @@ class Key:
         self.contents = contents
         self.widget_type = widget_type
 
-        self._verify_input()
+        try:
+            self._verify_input()
+        except ValueError as e:
+            print('Encountered following exception when building key: {}'.format(self.key_id))
+            print(e)
+            print(self.__repr__())
+
+    def __repr__(self):
+        return '\n'.join(['{} : {}'.format(name, value) for name, value in vars(self).items()])
 
     def contains_point(self, x, y):
         """ Returns True if (x, y) is within bounds of key - otherwise False"""
