@@ -1,5 +1,6 @@
 
 import tkinter as tk
+from tkinter import messagebox
 
 from nuvox.services.eye_gaze_server import EyeGazeServer, NoGazeDataReturned
 from nuvox.config.config import Config
@@ -24,6 +25,8 @@ class EyeGazeTest(object):
         self.eyes = self.canvas.create_rectangle(0, 0, self.eye_width, self.eye_width, fill="blue")
         config = Config()
         self.eye_gaze_server = EyeGazeServer(host=config.GAZE_SERVER_HOST, exe_path=config.EXE_PATH)
+
+        self.consecutive_intervals_with_no_gaze = 0
 
     def run(self):
         self.eye_gaze_server.start_server()
@@ -52,11 +55,21 @@ class EyeGazeTest(object):
             window_x = (screen_relx * self.root.winfo_screenwidth() - self.root.winfo_x())
             window_y = (screen_rely * self.root.winfo_height() - self.root.winfo_y())
 
+            self.consecutive_intervals_with_no_gaze = 0
+
             w = self.eye_width / 2
             self.canvas.coords(self.eyes, window_x - w, window_y - w, window_x + w, window_y + w)
 
         except NoGazeDataReturned:
-            print('No gaze data returned!')
+            self.consecutive_intervals_with_no_gaze += 1
+            print(self.consecutive_intervals_with_no_gaze, 'intervals without gaze')
+            if self.consecutive_intervals_with_no_gaze > 25:
+                self.open_warning()
+
+    def open_warning(self):
+        answered_yes = messagebox.askyesno(message='Failing to detect eye gaze. \n Would you like to switch to mouse control?')
+        if answered_yes:
+            print('switching_to_mouse!')
 
 
 if __name__ == '__main__':

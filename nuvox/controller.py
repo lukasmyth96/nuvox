@@ -2,7 +2,7 @@
 import tkinter as tk
 
 from nuvox.keyboard import Keyboard
-from nuvox.view import View
+from nuvox.views.main_view import View
 from nuvox.services.predictive_text import PredictiveText
 from nuvox.services.text_to_speech import TextToSpeech
 from nuvox.services.eye_gaze_server import EyeGazeServer, NoGazeDataReturned
@@ -39,6 +39,7 @@ class Controller:
         self.required_iterations_in_focus = int(config.REQ_DWELL_TIME / config.GAZE_INTERVAL)
         self.key_trace = []
         self.current_text = ''
+        self.consecutive_intervals_with_no_gaze = 0  # used to automatically detect when to switch to mouse
 
         # Mapping form key_id to action functions
         self.key_id_to_action_function = {'speak': self.on_speak_key,
@@ -63,7 +64,8 @@ class Controller:
         return (len(self.key_trace) >= req_iters) and (len(set(self.key_trace[-req_iters:])) == 1)
 
     def run_app(self):
-        self.eye_gaze_server.start_server()
+        if self.config.CONTROL_WITH_EYES:
+            self.eye_gaze_server.start_server()
         self.view.start_loop()
 
     def periodic_callback(self):
@@ -72,27 +74,29 @@ class Controller:
         """
         try:
             relx, rely = self.get_gaze_relative_to_window()
+            self.consecutive_intervals_with_no_gaze = 0
+
+            key_in_focus = self.keyboard.get_key_at_point(x=relx, y=rely)
+            if key_in_focus:
+                self.key_trace.append(key_in_focus.key_id)
+
+                if self.key_in_focus_just_changed:
+                    self.on_key_in_focus_changing()
+                else:
+                    self.view.increment_widget_colour(key_id=key_in_focus.key_id)
+                    if self.key_in_focus_for_required_time:
+                        self.on_key_in_focus_for_required_time(key_in_focus)
+
         except NoGazeDataReturned:
+            self.consecutive_intervals_with_no_gaze += 1
+            if self.consecutive_intervals_with_no_gaze > self.config.INTERVALS_BEFORE_SWITCH_TO_MOUSE:
+                switch_to_mouse = self.view.open_switch_to_mouse_control_popup()
+                if switch_to_mouse:
+                    self.config.CONTROL_WITH_EYES = False
+                else:
+                    self.consecutive_intervals_with_no_gaze = -1000
+
             self.on_gaze_leaving_window()
-            return
-
-        key_in_focus = self.keyboard.get_key_at_point(x=relx, y=rely)
-        if key_in_focus:
-
-            print('key in focus is: ', key_in_focus.key_id)
-
-            self.key_trace.append(key_in_focus.key_id)
-
-            if self.key_in_focus_just_changed:
-                self.on_key_in_focus_changing()
-            else:
-                self.view.increment_widget_colour(key_id=key_in_focus.key_id)
-
-            if self.key_in_focus_for_required_time:
-                self.on_key_in_focus_for_required_time(key_in_focus)
-
-        else:
-            self.on_gaze_leaving_window()  # FIXME this should never really happen
 
     def on_key_in_focus_changing(self):
         prev_key_id, new_key_id = self.key_trace[-2:]
@@ -135,7 +139,7 @@ class Controller:
         self.text_to_speech.speak_text_in_new_thread(text=self.current_text)
 
     def on_exit_key(self):
-        self.view.root.destroy()
+        self.view.toplevel.destroy()
         self.eye_gaze_server.process.kill()
 
     def on_del_key(self):
@@ -169,10 +173,22 @@ class Controller:
                 widget.configure(text=suggestion)
 
     def get_gaze_relative_to_window(self):
-        x, y = self.eye_gaze_server.get_gaze_relative_to_screen()
-        root = self.view.root
-        relx = (x * root.winfo_screenwidth() - root.winfo_x()) / root.winfo_width()
-        rely = (y * root.winfo_height() - root.winfo_y()) / root.winfo_height()
+        top_level = self.view.toplevel
+        if self.config.CONTROL_WITH_EYES:
+            x, y = self.eye_gaze_server.get_gaze_relative_to_screen()
+        else:
+            x, y = self.get_mouse_position_relative_to_screen()
+
+        # get coords relative to toplevel window
+        relx = (x * top_level.winfo_screenwidth() - top_level.winfo_x()) / top_level.winfo_width()
+        rely = (y * top_level.winfo_height() - top_level.winfo_y()) / top_level.winfo_height()
         return relx, rely
+
+    def get_mouse_position_relative_to_screen(self):
+        top_level = self.view.toplevel
+        x = top_level.winfo_pointerx() / top_level.winfo_screenwidth()
+        y = top_level.winfo_pointery() / top_level.winfo_screenheight()
+        return x, y
+
 
 
