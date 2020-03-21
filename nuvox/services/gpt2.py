@@ -31,6 +31,7 @@ class GPT2:
         self.tokenizer.pad_token = '[PAD]'
         self.tokenizer.decoder[self.tokenizer.pad_token_id] = self.tokenizer.pad_token
         self.keras_model = TFGPT2LMHeadModel.from_pretrained(self.model_name)
+        self.predict_next_word_prob('.', ['warming', 'up'])  # because first prediction is always slow
 
     def predict_next_word_prob(self, prompt, potential_words):
         """
