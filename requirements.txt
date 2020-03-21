@@ -3,7 +3,7 @@ transformers
 gTTs
 pygame
 matplotlib
-mutagen
+nltk
 tqdm
 pandas
 wordfreq
