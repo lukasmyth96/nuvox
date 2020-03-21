@@ -40,7 +40,7 @@ class Controller:
         self.key_trace = []
         self.current_text = ''
 
-        # Actions
+        # Mapping form key_id to action functions
         self.key_id_to_action_function = {'speak': self.on_speak_key,
                                           'delete': self.on_del_key,
                                           'clear': self.on_clear_key,
@@ -49,8 +49,8 @@ class Controller:
                                           '.': lambda: self.on_punctuation_key('.'),
                                           '?': lambda: self.on_punctuation_key('?'),
                                           'suggestion_1': lambda: self.on_suggestion_key(1),
-                                          'suggestion_2': lambda: self.on_suggestion_key(1),
-                                          'suggestion_3': lambda: self.on_suggestion_key(1),
+                                          'suggestion_2': lambda: self.on_suggestion_key(2),
+                                          'suggestion_3': lambda: self.on_suggestion_key(3),
                                           }
 
     @property

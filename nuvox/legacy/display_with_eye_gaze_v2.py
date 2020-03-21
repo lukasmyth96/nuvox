@@ -11,7 +11,7 @@ from nuvox.services.trace_algorithm import TraceAlgorithm
 from nuvox.legacy.language_model import GPT2
 from nuvox.utils.text_to_speech import TextToSpeech
 from nuvox.utils.interval_callback import IntervalCallback
-from nuvox.eye_gaze_test import get_eye_coords_relative_to_screen, NoGazeDataReturned
+from nuvox.utils.eye_gaze_test import get_eye_coords_relative_to_screen, NoGazeDataReturned
 
 
 class Display:
