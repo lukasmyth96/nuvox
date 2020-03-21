@@ -27,7 +27,7 @@ class Config:
 
     # eye gaze server
     GAZE_SERVER_HOST = 'http://localhost:3070'
-    EXE_PATH = os.path.join(ROOT_DIR, 'lib', 'Interaction_Streams_101.exe')
+    EXE_PATH = os.path.join(ROOT_DIR, 'eye_gaze_server', 'Eye_Gaze_Server.exe')
 
     # key settings
     FONT = 'calibri'
