@@ -21,7 +21,7 @@ class Config:
     GAZE_INTERVAL = 0.1  # seconds between consecutive sampling of the gaze position
 
     # predictive text
-    VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'config', 'discrete_representation_to_words.pkl')  # TODO compute this on fly
+    VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'config', 'discrete_representation_to_words.pkl')  # TODO compute this on fly?
     MAX_POTENTIAL_WORDS = 5
     PRED_FLASH_DURATION = 0.5
 
