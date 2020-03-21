@@ -1,7 +1,9 @@
 import tkinter as tk
+from tkinter import messagebox
 import time
 
 import numpy as np
+from nuvox.views.popups import YesNoPopup
 
 
 class View:
@@ -13,7 +15,9 @@ class View:
         config: nuvox.config.config.Config
         """
         self.config = config
-        self.root = tk.Tk()
+        root = tk.Tk()
+        root.withdraw()
+        self.toplevel = tk.Tk()
         self.configure_window()
         self.key_id_to_widget = {}
         self.periodic_callback = None
@@ -27,7 +31,7 @@ class View:
             raise ValueError('Cannot start app until periodic callback has been set in View')
 
         self.start_periodic_callback()
-        self.root.mainloop()
+        self.toplevel.mainloop()
 
     def start_periodic_callback(self):
         """
@@ -41,7 +45,7 @@ class View:
         """
         # make function call and then call this function again after delay
         self.periodic_callback()
-        self.root.after(ms=int(1000*self.config.GAZE_INTERVAL), func=self.start_periodic_callback)
+        self.toplevel.after(ms=int(1000 * self.config.GAZE_INTERVAL), func=self.start_periodic_callback)
 
     def create_widgets(self, keyboard):
         """
@@ -52,7 +56,7 @@ class View:
         """
         for key in keyboard.keys:
             text = ' '.join(key.contents).upper()
-            widget = tk.Button(master=self.root,
+            widget = tk.Button(master=self.toplevel,
                                text=text,
                                fg=rgb_to_hex(self.config.TEXT_COLOUR),
                                bg=rgb_to_hex(self.config.DEFAULT_BG),
@@ -67,12 +71,12 @@ class View:
             self.key_id_to_widget[key.key_id] = widget
 
     def configure_window(self):
-        self.root.configure(background=self.config.DISPLAY_BG_COLOUR)
-        self.root.title('nuvox keyboard')
-        self.root.geometry("{}x{}+350+50".format(self.config.DISPLAY_WIDTH,
-                                                 self.config.DISPLAY_HEIGHT))
-        self.root.resizable(width=self.config.RESIZABLE, height=self.config.RESIZABLE)
-        self.root.attributes("-topmost", self.config.FORCE_ON_TOP)
+        self.toplevel.configure(background=self.config.DISPLAY_BG_COLOUR)
+        self.toplevel.title('nuvox keyboard')
+        self.toplevel.geometry("{}x{}+350+50".format(self.config.DISPLAY_WIDTH,
+                                                     self.config.DISPLAY_HEIGHT))
+        self.toplevel.resizable(width=self.config.RESIZABLE, height=self.config.RESIZABLE)
+        self.toplevel.attributes("-topmost", self.config.FORCE_ON_TOP)
 
     def update_display_text(self, new_text):
         widget = self.key_id_to_widget['display']
@@ -83,9 +87,20 @@ class View:
         widget = self.key_id_to_widget[key_id]
         current_text = widget.cget('text')
         widget.configure(text=word, font="{} {}".format(self.config.FONT, self.config.BUTTON_FONT_SIZE+6))
-        self.root.update()
+        self.toplevel.update()
         time.sleep(self.config.PRED_FLASH_DURATION)
         widget.configure(text=current_text, font="{} {}".format(self.config.FONT, self.config.BUTTON_FONT_SIZE))  # restore current text
+
+    def open_switch_to_mouse_control_popup(self):
+        """ Opens yes/no popup asking whether user wants to switch to mouse mode
+        Returns
+        -------
+        answered_yes: bool
+        """
+        popup = YesNoPopup(master=self.toplevel,
+                           message='Looks like we\'re not seeing eye to eye - want to switch to mouse control?')
+        answered_yes = popup.get_response()
+        return answered_yes
 
     def increment_widget_colour(self, key_id):
         widget = self.key_id_to_widget[key_id]
