@@ -1,12 +1,9 @@
 
-from distutils.util import strtobool
 import json
 import logging
 import os
 import pickle
 import re
-
-from PIL import ImageFont
 
 
 def pickle_save(filename, an_object):

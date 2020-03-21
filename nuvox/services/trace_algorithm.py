@@ -1,6 +1,6 @@
 import os
 
-from nuvox.utils.common import pickle_load
+from nuvox.utils.io import pickle_load
 from definition import ROOT_DIR
 
 

@@ -42,7 +42,18 @@ class PredictiveText:
 
         ranked_suggestions = sorted(word_to_prob.keys(), key=lambda k: word_to_prob.get(k, 0), reverse=True)
 
+        if self.need_to_capitalize(prompt):
+            ranked_suggestions = self.capitalize(ranked_suggestions)
+
         return ranked_suggestions
+
+    @staticmethod
+    def need_to_capitalize(prompt):
+        return (not prompt) or (list(prompt)[-1] in ['.', '?', '!'])
+
+    @staticmethod
+    def capitalize(words):
+        return [word.capitalize() for word in words]
 
 
 

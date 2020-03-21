@@ -10,7 +10,6 @@ class SFX:
 
     def __init__(self):
 
-        # TODO setup relative paths
         self.click_on_mp3 = os.path.join(ROOT_DIR, 'nuvox', 'resources', 'click_on.mp3')
         self.click_off_mp3 = os.path.join(ROOT_DIR, 'nuvox', 'resources', 'click_off.mp3')
 
