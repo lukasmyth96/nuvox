@@ -32,6 +32,8 @@ class PredictiveText:
         ranked_suggestions: list[str]
             ranked list of other suggested words
         """
+        key_id_sequence = self.remove_blacklisted_keys(key_id_sequence)
+
         # Phase 1) Predict set of possible words based on the swype pattern ONLY
         potential_words = self.trace_algorithm.get_possible_words(key_id_sequence=key_id_sequence)
         potential_words = potential_words[:self.config.MAX_POTENTIAL_WORDS]
@@ -45,7 +47,13 @@ class PredictiveText:
         if self.need_to_capitalize(prompt):
             ranked_suggestions = self.capitalize(ranked_suggestions)
 
+        print('Key trace: \n ', key_id_sequence, '\n ranked suggestions: ', ranked_suggestions)
+
         return ranked_suggestions
+
+    def remove_blacklisted_keys(self, key_id_sequence):
+        """ Remove key_ids from sequence that are to be ignored e.g. the blank key at center of screen"""
+        return [key_id for key_id in key_id_sequence if key_id not in self.config.KEYS_TO_IGNORE]
 
     @staticmethod
     def need_to_capitalize(prompt):

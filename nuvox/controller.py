@@ -140,7 +140,10 @@ class Controller:
 
     def on_exit_key(self):
         self.view.toplevel.destroy()
-        self.eye_gaze_server.process.kill()
+        try:
+            self.eye_gaze_server.process.kill()
+        except AttributeError:
+            pass
 
     def on_del_key(self):
         current_words = self.current_text.split(' ')

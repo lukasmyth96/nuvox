@@ -17,11 +17,11 @@ class Config:
     FORCE_ON_TOP = True
 
     # swype settings
-    REQ_DWELL_TIME = 0.8  # seconds required to start/stop a swype
-    GAZE_INTERVAL = 0.05  # seconds between consecutive sampling of the gaze position
+    REQ_DWELL_TIME = 1  # seconds required to start/stop a swype
+    GAZE_INTERVAL = 0.1  # seconds between consecutive sampling of the gaze position
 
     # control settings
-    CONTROL_WITH_EYES = True
+    CONTROL_WITH_EYES = False
     TIME_BEFORE_SWITCH_TO_MOUSE = 5  # secs without gaze data before asking to switch to mouse
     INTERVALS_BEFORE_SWITCH_TO_MOUSE = TIME_BEFORE_SWITCH_TO_MOUSE / GAZE_INTERVAL
 
@@ -29,6 +29,8 @@ class Config:
     VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'config', 'discrete_representation_to_words.pkl')  # TODO compute this on fly?
     MAX_POTENTIAL_WORDS = 5  # maximum words passed to the language model for consideration
     PRED_FLASH_DURATION = 0.5  # num secs that predicted word is flashed on key
+    KEYS_TO_IGNORE = ['5', ',', '.', '?', 'display', 'suggestion_1', 'suggestion_2', 'suggestion_3',
+                      'speak', 'delete', 'clear', 'exit']
 
     # eye gaze server
     GAZE_SERVER_HOST = 'http://localhost:3070'
