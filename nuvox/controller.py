@@ -136,7 +136,7 @@ class Controller:
             self.view.reset_widget_colour(key_id=self.key_trace[-1])
 
     def on_speak_key(self):
-        self.text_to_speech.speak_text_in_new_thread(text=self.current_text)
+        self.text_to_speech.speak_text(text=self.current_text)
 
     def on_exit_key(self):
         self.view.toplevel.destroy()
