@@ -136,11 +136,14 @@ class Controller:
             self.view.reset_widget_colour(key_id=self.key_trace[-1])
 
     def on_speak_key(self):
-        self.text_to_speech.speak_text_in_new_thread(text=self.current_text)
+        self.text_to_speech.speak_text(text=self.current_text)
 
     def on_exit_key(self):
         self.view.toplevel.destroy()
-        self.eye_gaze_server.process.kill()
+        try:
+            self.eye_gaze_server.process.kill()
+        except AttributeError:
+            pass
 
     def on_del_key(self):
         current_words = self.current_text.split(' ')
