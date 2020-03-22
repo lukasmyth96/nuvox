@@ -1,4 +1,5 @@
 
+import time
 import tkinter as tk
 from tkinter import messagebox
 
@@ -15,8 +16,8 @@ class EyeGazeTest(object):
         root:
         """
         self.root = root
-        self.root.geometry("450x600")
-
+        self.root.geometry("450x600+350+50")
+        self.root.attributes("-topmost", True)
         self.canvas = tk.Canvas(master=self.root,
                                 width=self.root.winfo_screenwidth(),
                                 height=self.root.winfo_screenheight())
