@@ -1,14 +1,14 @@
+from collections import OrderedDict
 import itertools
-import os
+
 import numpy as np
 
 from nuvox.utils.io import pickle_load
-from definition import ROOT_DIR
 
 
 class TraceAlgorithm:
 
-    def __init__(self, vocab_path, min_req=3):
+    def __init__(self, vocab_path):
         """
         The trace algorithm is responsible for identifying a set of potential intended words given the sequence of
         key ids that were in focus at each interval during the swype
@@ -22,12 +22,12 @@ class TraceAlgorithm:
         """
 
         self.vocab_path = vocab_path
-        self.min_req = min_req
         self.discrete_repr_to_words = pickle_load(vocab_path)
 
-    def get_possible_words(self, key_id_sequence):
+    def get_possible_word_to_trace_prob(self, key_id_sequence):
         """
-        Returns a list of possible words for a given key trace.
+        Returns a dict mapping all possible intended words to the probability of that word being intended based on the
+        trace ONLY - NO language modelling occurs at this stage
         Parameters
         ----------
         key_id_sequence: list[str]
@@ -35,23 +35,36 @@ class TraceAlgorithm:
 
         Returns
         -------
-        possible_words: list[str]
-            list of possible words
+        possible_word_to_prob: dict
+            dict mapping a possible word to it's probability based solely on the trace - NOT how likely that word is
+            to appear in the current context
         """
 
         start_key, end_key, intermediate_keys = self.get_start_end_intermediate_keys(key_id_sequence)
 
-        grouped_intermediate_keys, counts = self.get_intermediate_key_counts(intermediate_keys)
-        scaled_key_probs = self.get_scaled_probs_for_counts(counts)
-        sub_lists, sub_list_probs = self.get_all_sub_lists_and_probs(grouped_intermediate_keys, scaled_key_probs)
+        if intermediate_keys:
+            grouped_intermediate_keys, counts = self.get_intermediate_key_counts(intermediate_keys)
+            intermediate_key_probs = self.get_scaled_probs_for_counts(counts)
 
-        # first has highest prob
-        ranked_sub_lists = sorted(l for l, p in sorted(zip(sub_lists, sub_list_probs), key=lambda pair: pair[1]))[::-1]
-        most_likely_discrete_reprs = [''.join([start_key, ''.join(inter_keys), end_key]) for inter_keys in ranked_sub_lists[:20]]
+            # get dict mapping all possible sub-seq of intermediate keys to it's probability
+            discrete_repr_to_prob = self.get_discrete_repr_to_prob(start_key, end_key, grouped_intermediate_keys, intermediate_key_probs)
+        else:
+            if start_key == end_key:
+                discrete_repr = start_key
+            else:
+                discrete_repr = ''.join([start_key, end_key])
+            discrete_repr_to_prob = {discrete_repr: 1.0}
 
-        possible_words = list(itertools.chain.from_iterable([self.discrete_repr_to_words.get(discrete_repr, []) for discrete_repr in most_likely_discrete_reprs]))
+        # possible word to prob
+        possible_word_to_prob = {}
+        for discrete_repr, prob in discrete_repr_to_prob.items():
+            words = self.discrete_repr_to_words.get(discrete_repr, [])
+            possible_word_to_prob.update({word: prob for word in words})
 
-        return possible_words
+        # Order so that most likely appear first
+        possible_word_to_prob = OrderedDict({w: p for w, p in sorted(possible_word_to_prob.items(), key=lambda item: item[1], reverse=True)})
+
+        return possible_word_to_prob
 
     @staticmethod
     def get_start_end_intermediate_keys(key_id_sequence):
@@ -108,24 +121,26 @@ class TraceAlgorithm:
         return grouped_keys, counts
 
     @staticmethod
-    def get_all_sub_lists_and_probs(key_list, key_probs):
-        sub_lists = []
-        sub_list_probs = []
-        for sub_list_len in range(len(key_list) + 1):
-            for index_sub_list in itertools.combinations(list(range(len(key_list))), sub_list_len):
-                sub_lists.append([key_list[idx] for idx in index_sub_list])
+    def get_discrete_repr_to_prob(start_key, end_key, intermediate_keys, intermediate_key_probs):
+        """ Returns dict mapping a possible discrete repr to it's prob"""
+        discrete_repr_to_prob = {}
+        for sub_list_len in range(len(intermediate_keys) + 1):
+            for index_sub_list in itertools.combinations(list(range(len(intermediate_keys))), sub_list_len):
+                sub_list = [intermediate_keys[idx] for idx in index_sub_list]
+                discrete_repr = ''.join([start_key, ''.join(sub_list), end_key])
                 joint_prob = 1  # calculate joint of this sub list
-                for i in range(len(key_list)):
+                for i in range(len(intermediate_keys)):
                     if i in index_sub_list:
-                        joint_prob *= key_probs[i]
+                        joint_prob *= intermediate_key_probs[i]
                     else:
-                        joint_prob *= (1 - key_probs[i])
-                sub_list_probs.append(joint_prob)
+                        joint_prob *= (1 - intermediate_key_probs[i])
+                discrete_repr_to_prob.update({discrete_repr: joint_prob})
 
-        return sub_lists, sub_list_probs
+        return discrete_repr_to_prob
 
     @staticmethod
     def get_scaled_probs_for_counts(counts):
+        # FIXME can't hardcode this
         return 3/4 * (np.array(counts) / max(counts))
 
 

@@ -33,7 +33,7 @@ class GPT2:
         self.keras_model = TFGPT2LMHeadModel.from_pretrained(self.model_name)
         self.predict_next_word_prob('.', ['warming', 'up'])  # because first prediction is always slow
 
-    def predict_next_word_prob(self, prompt, potential_words):
+    def predict_next_word_prob(self, prompt, candidate_words):
         """
         Returns a dict mapping each of the potential_words to the probability that it's the next word in the
         current_sentence
@@ -48,7 +48,7 @@ class GPT2:
         word_to_prob = {}
         softmax = Softmax()
 
-        potential_word_tokens = [self.tokenizer.encode(word) for word in potential_words]
+        potential_word_tokens = [self.tokenizer.encode(word) for word in candidate_words]
 
         if not prompt:
             prompt = '.'  # model cannot predict on empty string
@@ -57,7 +57,7 @@ class GPT2:
         initial_pred, past = self.keras_model(np.array(prompt_tokens), past=None)
         softmax_vector = softmax(initial_pred[..., -1, :]).numpy()  # gives probabilities for next token
 
-        for word, word_tokens in zip(potential_words, potential_word_tokens):
+        for word, word_tokens in zip(candidate_words, potential_word_tokens):
             if len(word_tokens) == 1:
                 word_to_prob[word] = softmax_vector[word_tokens[0]]
             else:

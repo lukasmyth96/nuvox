@@ -1,3 +1,5 @@
+from wordfreq import zipf_frequency
+
 from nuvox.services.gpt2 import GPT2
 from nuvox.services.trace_algorithm import TraceAlgorithm
 
@@ -34,15 +36,19 @@ class PredictiveText:
         """
         key_id_sequence = self.remove_blacklisted_keys(key_id_sequence)
 
-        # Phase 1) Predict set of possible words based on the swype pattern ONLY
-        potential_words = self.trace_algorithm.get_possible_words(key_id_sequence=key_id_sequence)
-        potential_words = potential_words[:self.config.MAX_POTENTIAL_WORDS]
-        print('Top {} potential words are: {}'.format(len(potential_words), potential_words))
+        # Phase 1) Get a dict mapping all possibly intended words to their probability based on the trace ONLY
+        possible_word_to_prob = self.trace_algorithm.get_possible_word_to_trace_prob(key_id_sequence=key_id_sequence)
 
-        # Phase 2) Predict the probability that each word appears next in the sentence
-        word_to_prob = self.language_model.predict_next_word_prob(prompt, potential_words=potential_words)
+        # Phase 2) Calculate a scaled likelihood by multiplying each words trace probability by log10(frequency(word))
+        # this is used to narrow the list of candidates down to a suitable number for the language model
+        possible_word_to_joint_prob = {word: trace_prob * zipf_frequency(word, 'en') for word, trace_prob in possible_word_to_prob.items()}
+        sorted_candidates = [word for word, _ in sorted(possible_word_to_joint_prob.items(), key=lambda item: item[1], reverse=True)]
+        final_candidates = sorted_candidates[:self.config.MAX_POTENTIAL_WORDS]
 
-        ranked_suggestions = sorted(word_to_prob.keys(), key=lambda k: word_to_prob.get(k, 0), reverse=True)
+        # Phase 3) Predict the probability that each word appears next in the sentence
+        final_candidate_to_prob = self.language_model.predict_next_word_prob(prompt, candidate_words=final_candidates)
+
+        ranked_suggestions = sorted(final_candidate_to_prob.keys(), key=lambda k: final_candidate_to_prob.get(k, 0), reverse=True)
 
         if self.need_to_capitalize(prompt):
             ranked_suggestions = self.capitalize(ranked_suggestions)
