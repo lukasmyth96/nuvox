@@ -36,6 +36,9 @@ class PredictiveText:
         """
         key_id_sequence = self.remove_blacklisted_keys(key_id_sequence)
 
+        if not key_id_sequence:
+            return []
+
         # Phase 1) Get a dict mapping all possibly intended words to their probability based on the trace ONLY
         possible_word_to_prob = self.trace_algorithm.get_possible_word_to_trace_prob(key_id_sequence=key_id_sequence)
 

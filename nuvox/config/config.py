@@ -21,12 +21,12 @@ class Config:
     GAZE_INTERVAL = 0.1  # seconds between consecutive sampling of the gaze position
 
     # control settings
-    CONTROL_WITH_EYES = False
+    CONTROL_WITH_EYES = True
     TIME_BEFORE_SWITCH_TO_MOUSE = 5  # secs without gaze data before asking to switch to mouse
     INTERVALS_BEFORE_SWITCH_TO_MOUSE = TIME_BEFORE_SWITCH_TO_MOUSE / GAZE_INTERVAL
 
     # predictive text
-    VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'config', 'discrete_representation_to_words.pkl')  # TODO compute this on fly?
+    VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'config', 'top_25k_vocab.pkl')
     MAX_POTENTIAL_WORDS = 5  # maximum words passed to the language model for consideration
     PRED_FLASH_DURATION = 0.5  # num secs that predicted word is flashed on key
     KEYS_TO_IGNORE = ['5', ',', '.', '?', 'display', 'suggestion_1', 'suggestion_2', 'suggestion_3',
