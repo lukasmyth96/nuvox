@@ -22,7 +22,7 @@ nuvox_standard_keyboard = [Key(x1=0/8, y1=0/8, w=7/8, h=1/8, key_id='display', c
                            Key(x1=7/8, y1=2/4, w=1/8, h=1/4, key_id='delete', contents=['del']),
 
                            Key(x1=0/8, y1=3/4, w=1/8, h=1/4, key_id='settings_switch', contents=['⚙']),
-                           Key(x1=1/8, y1=3/4, w=2/8, h=1/4, key_id='7', contents=['p', 'q', 'r', 's']),
-                           Key(x1=3/8, y1=3/4, w=2/8, h=1/4, key_id='8', contents=['t', 'u', 'v']),
-                           Key(x1=5/8, y1=3/4, w=2/8, h=1/4, key_id='9', contents=['w', 'x', 'y', 'z']),
+                           Key(x1=1/8, y1=3/4, w=2/8, h=1/4, key_id='7', contents=['p', 'q', 'r', 's', '.']),
+                           Key(x1=3/8, y1=3/4, w=2/8, h=1/4, key_id='8', contents=['t', 'u', 'v', ',']),
+                           Key(x1=5/8, y1=3/4, w=2/8, h=1/4, key_id='9', contents=['w', 'x', 'y', 'z', '?']),
                            Key(x1=7/8, y1=3/4, w=1/8, h=1/4, key_id='clear', contents=['clr'])]

@@ -39,6 +39,11 @@ class PredictiveText:
         if not key_id_sequence:
             return []
 
+        # Phase 0 - check if punctuation key was selected
+        intended_punctuation = self.get_intended_punctuation(key_id_sequence)
+        if intended_punctuation:
+            return [intended_punctuation]
+
         # Phase 1) Get a dict mapping all possibly intended words to their probability based on the trace ONLY
         possible_word_to_prob = self.trace_algorithm.get_possible_word_to_trace_prob(key_id_sequence=key_id_sequence)
 
@@ -59,6 +64,23 @@ class PredictiveText:
         print('Key trace: \n ', key_id_sequence, '\n ranked suggestions: ', ranked_suggestions)
 
         return ranked_suggestions
+
+    def get_intended_punctuation(self, key_id_sequence):
+        """
+        Config contains a hardcoded mapping from key_id to punctuation
+        Parameters
+        ----------
+        key_id_sequence: list[str]
+
+        Returns
+        -------
+        punctuation: str
+            or None if no punctation
+        """
+        if len(set(key_id_sequence)) == 1:
+            key_id = key_id_sequence[0]
+            punctuation = self.config.FIXED_KEY_ID_TO_PUNCTUATION.get(key_id)
+            return punctuation
 
     def remove_blacklisted_keys(self, key_id_sequence):
         """ Remove key_ids from sequence that are to be ignored e.g. the blank key at center of screen"""

@@ -8,6 +8,9 @@ class Config:
 
     # keyboard layout
     KEY_LIST = nuvox_standard_keyboard
+    FIXED_KEY_ID_TO_PUNCTUATION = {'7': '.',
+                                   '8': ',',
+                                   '9': '?'}
 
     # display settings
     DISPLAY_HEIGHT = 600
