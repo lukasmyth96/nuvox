@@ -1,16 +1,16 @@
 import os
 
-from nuvox.config.keyboard_layouts import nuvox_standard_keyboard
+from nuvox.config.keyboard_layouts import nuvox_standard_keyboard, nuvox_new_keyboard
 from definition import ROOT_DIR
 
 
 class Config:
 
     # keyboard layout
-    KEY_LIST = nuvox_standard_keyboard
+    KEY_LIST = nuvox_new_keyboard
 
     # display settings
-    DISPLAY_WIDTH = 450
+    DISPLAY_WIDTH = 750
     DISPLAY_HEIGHT = 600
     DISPLAY_BG_COLOUR = 'steel blue'
     RESIZABLE = False
