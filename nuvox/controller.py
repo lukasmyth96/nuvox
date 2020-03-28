@@ -158,7 +158,7 @@ class Controller:
 
     def on_clear_key(self):
         self.update_display_text(text='')
-        self.update_suggestions(suggestions=['']*3)
+        self.update_suggestions(suggestions=['']*3, suggestion_indices=[])
 
     def update_display_text(self, text):
         self.current_text = text
