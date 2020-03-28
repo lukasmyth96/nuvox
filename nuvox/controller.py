@@ -94,11 +94,11 @@ class Controller:
         except NoGazeDataReturned:
             self.consecutive_intervals_with_no_gaze += 1
             if self.consecutive_intervals_with_no_gaze > self.config.INTERVALS_BEFORE_SWITCH_TO_MOUSE:
-                switch_to_mouse = self.view.open_switch_to_mouse_control_popup()
+                switch_to_mouse = self.view.open_yes_no_popup(message='Failed to detect eye gaze - switch to mouse control?')
                 if switch_to_mouse:
                     self.config.CONTROL_WITH_EYES = False
                 else:
-                    self.consecutive_intervals_with_no_gaze = -1000
+                    self.consecutive_intervals_with_no_gaze = -100000
 
             self.on_gaze_leaving_window()
 
@@ -143,11 +143,13 @@ class Controller:
         self.text_to_speech.speak_text(text=self.current_text)
 
     def on_exit_key(self):
-        self.view.toplevel.destroy()
-        try:
-            self.eye_gaze_server.process.kill()
-        except AttributeError:
-            pass
+        answered_yes = self.view.open_yes_no_popup(message='Are you sure you want to exit?')
+        if answered_yes:
+            self.view.toplevel.destroy()
+            try:
+                self.eye_gaze_server.process.kill()
+            except AttributeError:
+                pass
 
     def on_del_key(self):
         current_words = self.current_text.split(' ')
@@ -156,7 +158,7 @@ class Controller:
 
     def on_clear_key(self):
         self.update_display_text(text='')
-        self.update_suggestions(suggestions=['']*3)
+        self.update_suggestions(suggestions=['']*3, suggestion_indices=[])
 
     def update_display_text(self, text):
         self.current_text = text
