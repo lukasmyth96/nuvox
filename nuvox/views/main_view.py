@@ -96,14 +96,19 @@ class View:
         time.sleep(self.config.PRED_FLASH_DURATION)
         widget.configure(text=current_text, font="{} {}".format(self.config.FONT, self.config.BUTTON_FONT_SIZE))  # restore current text
 
-    def open_switch_to_mouse_control_popup(self):
-        """ Opens yes/no popup asking whether user wants to switch to mouse mode
+    def open_yes_no_popup(self, message):
+        """
+        Open yes/no popup and return response
+        Parameters
+        ----------
+        message: str
+
         Returns
         -------
         answered_yes: bool
         """
         popup = YesNoPopup(master=self.toplevel,
-                           message='Looks like we\'re not seeing eye to eye - want to switch to mouse control?')
+                           message=message)
         answered_yes = popup.get_response()
         return answered_yes
 
