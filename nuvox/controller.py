@@ -39,6 +39,8 @@ class Controller:
         self.required_iterations_in_focus = int(config.REQ_DWELL_TIME / config.GAZE_INTERVAL)
         self.key_trace = []
         self.current_text = ''
+        self.suggestions = []  # list of all current suggestions
+        self.suggestion_indices = []  # list of current indices being shown
         self.consecutive_intervals_with_no_gaze = 0  # used to automatically detect when to switch to mouse
 
         # Mapping form key_id to action functions
@@ -52,6 +54,8 @@ class Controller:
                                           'suggestion_1': lambda: self.on_suggestion_key(1),
                                           'suggestion_2': lambda: self.on_suggestion_key(2),
                                           'suggestion_3': lambda: self.on_suggestion_key(3),
+                                          'suggestion_left_arrow': lambda: self.on_suggestion_left_arrow(),
+                                          'suggestion_right_arrow': lambda: self.on_suggestion_right_arrow()
                                           }
 
     @property
@@ -126,7 +130,7 @@ class Controller:
                                                                     key_id_sequence=self.key_trace)
         if ranked_predictions:
             self.update_display_text(' '.join([self.current_text, ranked_predictions[0]]))
-            self.update_suggestions(suggestions=ranked_predictions[1:])
+            self.update_suggestions(suggestions=ranked_predictions[1:], suggestion_indices=[0, 1, 2])
             self.view.flash_pred_word(key_id=key_in_focus.key_id, word=ranked_predictions[0])
         self.view.reset_widget_colour(key_id=key_in_focus.key_id)
         self.key_trace.clear()
@@ -154,6 +158,10 @@ class Controller:
         self.update_display_text(text='')
         self.update_suggestions(suggestions=['']*3)
 
+    def update_display_text(self, text):
+        self.current_text = text
+        self.view.update_display_text(new_text=text)
+
     def on_suggestion_key(self, suggestion_num):
         current_words = self.current_text.split(' ')
         widget = self.view.key_id_to_widget['suggestion_{}'.format(suggestion_num)]
@@ -161,19 +169,31 @@ class Controller:
         new_words = current_words[:-1] + [suggestion]
         self.update_display_text(text=' '.join(new_words))
 
+    def on_suggestion_right_arrow(self):
+        if self.suggestion_indices:
+            scroll_amount = min(3, len(self.suggestions)-self.suggestion_indices[-1]-1)
+            self.update_suggestions(suggestions=self.suggestions, suggestion_indices=[i+scroll_amount for i in self.suggestion_indices])
+
+    def on_suggestion_left_arrow(self):
+        if self.suggestion_indices and self.suggestion_indices[0] >= 3:
+            self.update_suggestions(suggestions=self.suggestions,suggestion_indices=[i - 3 for i in self.suggestion_indices])
+
+    def update_suggestions(self, suggestions, suggestion_indices):
+        """
+        Parameters
+        ----------
+        suggestions: list[str]
+        suggestion_indices: list[int]
+        """
+        self.suggestions = suggestions
+        self.suggestion_indices = suggestion_indices
+        for display_idx, suggestion_idx in enumerate(suggestion_indices):
+            widget = self.view.key_id_to_widget.get('suggestion_{}'.format(display_idx+1))
+            if widget:
+                widget.configure(text=suggestions[suggestion_idx])
+
     def on_punctuation_key(self, char):
         self.update_display_text(''.join([self.current_text, char]))
-
-    def update_display_text(self, text):
-        self.current_text = text
-        self.view.update_display_text(new_text=text)
-
-    def update_suggestions(self, suggestions):
-        # FIXME make number of suggestions configurable
-        for idx, suggestion in enumerate(suggestions[:3]):
-            widget = self.view.key_id_to_widget.get('suggestion_{}'.format(idx+1))
-            if widget:
-                widget.configure(text=suggestion)
 
     def get_gaze_relative_to_window(self):
         top_level = self.view.toplevel
