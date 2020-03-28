@@ -48,9 +48,6 @@ class Controller:
                                           'delete': self.on_del_key,
                                           'clear': self.on_clear_key,
                                           'exit': self.on_exit_key,
-                                          ',': lambda: self.on_punctuation_key(','),
-                                          '.': lambda: self.on_punctuation_key('.'),
-                                          '?': lambda: self.on_punctuation_key('?'),
                                           'suggestion_1': lambda: self.on_suggestion_key(1),
                                           'suggestion_2': lambda: self.on_suggestion_key(2),
                                           'suggestion_3': lambda: self.on_suggestion_key(3),
@@ -130,7 +127,8 @@ class Controller:
                                                                     key_id_sequence=self.key_trace)
         if ranked_predictions:
             self.update_display_text(' '.join([self.current_text, ranked_predictions[0]]))
-            self.update_suggestions(suggestions=ranked_predictions[1:], suggestion_indices=[0, 1, 2])
+            suggestions = ranked_predictions[1:]
+            self.update_suggestions(suggestions=suggestions, suggestion_indices=list(range(min(3, len(suggestions)))))
             self.view.flash_pred_word(key_id=key_in_focus.key_id, word=ranked_predictions[0])
         self.view.reset_widget_colour(key_id=key_in_focus.key_id)
         self.key_trace.clear()
@@ -161,6 +159,8 @@ class Controller:
         self.update_suggestions(suggestions=['']*3, suggestion_indices=[])
 
     def update_display_text(self, text):
+        if text and (text[-1] in self.config.FIXED_KEY_ID_TO_PUNCTUATION.values()):
+            text = ''.join([text[:-2], text[-1]])  # filter space before punc e.g. 'hello .' --> 'hello.'
         self.current_text = text
         self.view.update_display_text(new_text=text)
 
@@ -193,9 +193,6 @@ class Controller:
             widget = self.view.key_id_to_widget.get('suggestion_{}'.format(display_idx+1))
             if widget:
                 widget.configure(text=suggestions[suggestion_idx])
-
-    def on_punctuation_key(self, char):
-        self.update_display_text(''.join([self.current_text, char]))
 
     def get_gaze_relative_to_window(self):
         top_level = self.view.toplevel
