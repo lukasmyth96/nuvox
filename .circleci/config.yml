@@ -24,4 +24,4 @@ jobs:
           name: Running tests
           command: |
             . venv/bin/activate
-            pytest tests
+            python -m pytest tests
