@@ -1,6 +1,10 @@
 version: 2
 jobs:
   build:
+    branches:
+      only:
+        - master
+        - implement_basic_analytics
     docker:
       - image: circleci/python:3.6
     steps:
@@ -21,6 +25,3 @@ jobs:
           command: |
             . venv/bin/activate
             pytest tests
-      - store_artifacts:
-          path: test-reports/
-          destination: python_app
