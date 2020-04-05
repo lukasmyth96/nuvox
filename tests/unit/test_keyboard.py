@@ -15,3 +15,10 @@ def test_valid_keyboard(key_list):
 def test_invalid_keyboard(key_list):
     with pytest.raises(ValueError) as e:
         Keyboard(key_list)
+
+
+def test_get_key_at_point():
+    keyboard = Keyboard(valid_keyboard)
+    assert keyboard.get_key_at_point(0.1, 0.1).key_id == 'display'
+    assert keyboard.get_key_at_point(1.1, 1.1) is None
+

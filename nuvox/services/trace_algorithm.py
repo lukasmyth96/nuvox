@@ -43,7 +43,7 @@ class TraceAlgorithm:
         start_key, end_key, intermediate_keys = self.get_start_end_intermediate_keys(key_id_sequence)
 
         if intermediate_keys:
-            grouped_intermediate_keys, counts = self.get_intermediate_key_counts(intermediate_keys)
+            grouped_intermediate_keys, counts = self.get_grouped_intermediate_keys_with_counts(intermediate_keys)
             intermediate_key_probs = self.get_scaled_probs_for_counts(counts)
 
             # get dict mapping all possible sub-seq of intermediate keys to it's probability
@@ -95,7 +95,7 @@ class TraceAlgorithm:
         return start_key, end_key, intermediate_keys
 
     @staticmethod
-    def get_intermediate_key_counts(intermediate_keys):
+    def get_grouped_intermediate_keys_with_counts(intermediate_keys):
         """
         returns a group list of intermediate keys and the counts
         e.g. [2, 2, 1, 4, 4, 2] --> ([2, 1, 4, 2], [2, 1, 2, 1)
