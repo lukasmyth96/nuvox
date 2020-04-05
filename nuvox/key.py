@@ -39,7 +39,7 @@ class Key:
         ----------
         other: nuvox.key.Key
         """
-        return not ((self.x2 <= other.x1) or (self.x1 >= other.x2) or (self.y1 <= other.y2) or (self.y2 >= other.y1))
+        return not ((self.x2 <= other.x1) or (self.x1 >= other.x2) or (self.y1 >= other.y2) or (self.y2 <= other.y1))
 
     def _verify_input(self):
 
