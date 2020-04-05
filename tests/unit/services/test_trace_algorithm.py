@@ -17,10 +17,11 @@ def test_get_start_end_intermediate_keys(key_id_sequence, expected):
     assert trace_algo.get_start_end_intermediate_keys(key_id_sequence) == expected
 
 
-@pytest.mark.parametrize('intermediate_keys, expected', [(['1', '1', '2'], (['1', '2'], [2, 1]))])
-def get_grouped_intermediate_keys_with_counts(intermediate_keys, expected):
+@pytest.mark.parametrize('intermediate_keys, expected', [(['1', '2', '2', '3'], (['1', '2', '3'], [1, 2, 1]))])
+def test_get_grouped_intermediate_keys_with_counts(intermediate_keys, expected):
     trace_algo = TraceAlgorithm(vocab_path)
     assert trace_algo.get_grouped_intermediate_keys_with_counts(intermediate_keys) == expected
+
 
 
 

@@ -11,6 +11,7 @@ class Keyboard:
             list of dictionaries defining the keyboard
         """
         self.key_id_to_key = {}
+        self.char_to_key = {}
         self._build_keyboard(key_list)
 
     @property
@@ -24,6 +25,9 @@ class Keyboard:
         key_list: list[nuvox.key.Key]
         """
         self.key_id_to_key = {key.key_id: key for key in key_list}
+        for key in key_list:
+            for char in key.contents:
+                self.char_to_key[char] = key
         self._check_for_overlaps()
 
     def get_key_at_point(self, x, y):
