@@ -28,7 +28,7 @@ class Keyboard:
 
     def get_key_at_point(self, x, y):
         """
-        Returns list of key ids for keys at a given point - can be two if point is right on border
+        Returns key id for key at a given point
         Parameters
         ----------
         x: float
