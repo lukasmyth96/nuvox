@@ -61,7 +61,7 @@ class View:
                                fg=rgb_to_hex(self.config.TEXT_COLOUR),
                                bg=rgb_to_hex(self.config.DEFAULT_BG),
                                font=("{} {}".format(self.config.FONT, self.config.BUTTON_FONT_SIZE)))
-            widget.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheigh=key.h)
+            widget.place(relx=key.x1, rely=key.y1, relwidth=key.w, relheight=key.h)
 
             if key.key_id == 'display':
                 widget.configure(anchor=tk.W,

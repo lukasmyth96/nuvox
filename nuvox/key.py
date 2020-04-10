@@ -23,12 +23,7 @@ class Key:
         self.contents = contents
         self.widget_type = widget_type
 
-        try:
-            self._verify_input()
-        except ValueError as e:
-            print('Encountered following exception when building key: {}'.format(self.key_id))
-            print(e)
-            print(self.__repr__())
+        self._verify_input()
 
     def __repr__(self):
         return '\n'.join(['{} : {}'.format(name, value) for name, value in vars(self).items()])
@@ -44,7 +39,7 @@ class Key:
         ----------
         other: nuvox.key.Key
         """
-        return not ((self.x2 <= other.x1) or (self.x1 >= other.x2) or (self.y1 <= other.y2) or (self.y2 >= other.y1))
+        return not ((self.x2 <= other.x1) or (self.x1 >= other.x2) or (self.y1 >= other.y2) or (self.y2 <= other.y1))
 
     def _verify_input(self):
 

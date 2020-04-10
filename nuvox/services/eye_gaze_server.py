@@ -1,4 +1,5 @@
 import ast
+import ctypes
 import requests
 import subprocess
 
@@ -11,7 +12,9 @@ class EyeGazeServer:
 
     def __init__(self, host, exe_path):
         """
+        Wrapper class for eye gaze HTTP server that's implemented in /eye_gaze_server/Eye_Gaze_Server.exe
 
+        NOTE - the server can only be run with administrator rights
         Parameters
         ----------
         host: str
@@ -24,6 +27,8 @@ class EyeGazeServer:
         self.process = None
 
     def start_server(self):
+        if not ctypes.windll.shell32.IsUserAnAdmin():
+            raise OSError('You must run python with administrator rights to start the eye server')
         self.process = subprocess.Popen(self.exe_path)
 
     def get_gaze_relative_to_screen(self):
