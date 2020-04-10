@@ -12,8 +12,8 @@ from definition import TESTS_DIR
                                                                        (None, '2022_01_01', 2),
                                                                        ('2020_01_01', '2022_01_01', 1)])
 def test_analytics_load_sessions(start_date, end_date, expected_num_sessions):
-    """ Test that sessions loaded by date lead to correct number of sessions being loaded"""
-    directory = os.path.join(TESTS_DIR, 'data', 'analytics_fixtures', 'sessions')
+    """ Test that sessions are loaded by date lead to correct number of session_loading_fixtures being loaded"""
+    directory = os.path.join(TESTS_DIR, 'data', 'analytics_fixtures', 'session_loading_fixtures')
     analytics = Analytics()
     analytics.load_sessions(directory, start_date, end_date)
     assert len(analytics.sessions) == expected_num_sessions
@@ -25,8 +25,10 @@ def test_analytics_load_sessions(start_date, end_date, expected_num_sessions):
                                                  ('2020_01_32', None)])
 def test_analytics_load_invalid_input(start_date, end_date):
     """ Test that ValueError gets raised when dates are invalid or wrongly formatted"""
-    directory = os.path.join(TESTS_DIR, 'data', 'analytics_fixtures', 'sessions')
+    directory = os.path.join(TESTS_DIR, 'data', 'analytics_fixtures', 'session_loading_fixtures')
     analytics = Analytics()
     with pytest.raises(ValueError) as e:
         analytics.load_sessions(directory, start_date, end_date)
+
+
 

@@ -25,14 +25,12 @@ class Session:
         self.commit = subprocess.check_output(["git", "describe", "--always"]).strip().decode('utf-8')
 
     def __repr__(self):
-        return 'start time: {} \ncommit: {} \nswypes: {}'.format(self.start_time, self.commit, len(self))
+        initial_text = ' '.join([swype.accepted_word for swype in self.swypes[:3]]) + '...'
+        return 'start time: {} \ncommit: {} \nswypes: {} \ntext: {}'.\
+            format(self.start_time, self.commit, len(self), initial_text)
 
     def __len__(self):
         return len(self.swypes)
-
-    def __iter__(self):
-        for swype in self.swypes:
-            yield swype
 
     def __getitem__(self, item):
         return self.swypes[item]
@@ -47,6 +45,10 @@ class Session:
         if not isinstance(swype, Swype):
             raise ValueError('can only append instances of the Swype class')
         self.swypes.append(swype)
+
+    def all_text(self):
+        """Returns all test from swypes in session"""
+        return ' '.join([swype.accepted_word for swype in self.swypes])
 
     def save(self):
         filename = '{}.pkl'.format(self.start_time)

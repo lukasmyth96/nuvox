@@ -1,5 +1,8 @@
 from datetime import datetime
 import os
+import itertools
+
+import numpy as np
 
 from nuvox.utils.io import pickle_load
 from nuvox.analytics.session import Session
@@ -12,7 +15,7 @@ class Analytics:
         self.sessions = []
 
     def __repr__(self):
-        return 'sessions: {}'.format(len(self))
+        return 'session_loading_fixtures: {}'.format(len(self))
 
     def __len__(self):
         return len(self.sessions)
@@ -36,7 +39,7 @@ class Analytics:
 
     def load_sessions(self, directory, start_date=None, end_date=None):
         """
-        Load saved sessions - between start and end date (inclusive) if specified
+        Load saved session_loading_fixtures - between start and end date (inclusive) if specified
         Parameters
         ----------
         directory: str
@@ -60,7 +63,30 @@ class Analytics:
                 session = pickle_load(os.path.join(directory, filename))
                 self.append(session)
 
+    def mean_accepted_word_rank(self):
+        """
+        Returns the mean across all swypes in all session_loading_fixtures of the rank of the accepted word within list ranked
+        suggestions for that swype.
+        Parameters
+        ----------
+        Returns
+        -------
+        mean_rank: float
+        """
+        return np.mean(list(itertools.chain.from_iterable([[swype.accepted_word_rank for swype in session]
+                                                           for session in self.sessions])))
 
+    def top_n_accuracy(self, n=1):
+        """
+        Returns the % of all swypes for which the accepted word was in the top-n suggestions
+        Parameters
+        ----------
+        n: int
 
-
-
+        Returns
+        -------
+        accuracy: float
+        """
+        return np.mean(list(itertools.chain.from_iterable([[swype.accepted_word in swype.ranked_suggestions[:n]
+                                                           for swype in session]
+                                                           for session in self.sessions])))

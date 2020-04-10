@@ -1,4 +1,4 @@
-
+import copy
 import tkinter as tk
 
 from nuvox.keyboard import Keyboard
@@ -125,10 +125,11 @@ class Controller:
             self.swype_in_progress = True
 
     def on_swype_end(self, key_in_focus):
+        current_key_trace = copy.copy(self.key_trace)  # as it will change whilst processing
         self.swype_in_progress = False
-        ranked_suggestions = self.predictive_text.predict_next_word(prompt=self.current_text, key_trace=self.key_trace)
+        ranked_suggestions = self.predictive_text.predict_next_word(prompt=self.current_text, key_trace=current_key_trace)
         if ranked_suggestions:
-            self.session.append(swype=Swype(self.key_trace, ranked_suggestions, accepted_word=ranked_suggestions[0]))
+            self.session.append(swype=Swype(current_key_trace, ranked_suggestions, accepted_word=ranked_suggestions[0]))
             self.update_display_text(' '.join([self.current_text, ranked_suggestions[0]]))
             self.update_suggestions(suggestions=ranked_suggestions[1:],
                                     suggestion_indices=list(range(min(3, len(ranked_suggestions[1:])))))
@@ -154,6 +155,7 @@ class Controller:
                 pass
 
     def on_del_key(self):
+        self.session.swypes[-1].was_deleted = True
         current_words = self.current_text.split(' ')
         if current_words:
             self.update_display_text(' '.join(current_words[:-1]))
