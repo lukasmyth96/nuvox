@@ -44,24 +44,23 @@ class PredictiveText:
         if intended_punctuation:
             return [intended_punctuation]
 
-        # Phase 1) Get a dict mapping all possibly intended words to their probability based on the trace ONLY
-        possible_word_to_prob = self.trace_algorithm.get_possible_word_to_trace_prob(key_id_sequence=key_trace)
+        # Phase 1) Get dict mapping word --> prob(word | trace) for all possibly intended words using trace algorithm
+        word_to_trace_prob = self.trace_algorithm.get_possible_word_to_trace_prob(key_id_sequence=key_trace)
+        candidate_words = list(word_to_trace_prob)
 
-        # Phase 2) Calculate a scaled likelihood by multiplying each words trace probability by log10(frequency(word))
-        # this is used to narrow the list of candidates down to a suitable number for the language model
-        possible_word_to_joint_prob = {word: trace_prob * zipf_frequency(word, 'en') for word, trace_prob in possible_word_to_prob.items()}
-        sorted_candidates = [word for word, _ in sorted(possible_word_to_joint_prob.items(), key=lambda item: item[1], reverse=True)]
-        final_candidates = sorted_candidates[:self.config.MAX_POTENTIAL_WORDS]
+        # Phase 2) Get dict mapping word --> prob(word | prompt) all possibly intended words using language model
+        word_to_language_prob = self.language_model.predict_next_word_prob(prompt, candidate_words=candidate_words)
+        _sum = sum([prob for prob in word_to_language_prob])  # normalize so probs sum to 1
+        word_to_language_prob = {word: prob/_sum for word, prob in word_to_language_prob.items()}
 
-        # Phase 3) Predict the probability that each word appears next in the sentence
-        final_candidate_to_prob = self.language_model.predict_next_word_prob(prompt, candidate_words=final_candidates)
+        # Phase 3) Get dict mapping word --> prob(word | trace) * prob(word | prompt) (i.e. the joint probability)
+        # TODO - need some sort of scaling factor to control influence of each model
+        word_to_joint_prob = {word: (word_to_trace_prob[word] * word_to_language_prob[word]) for word in candidate_words}
 
-        ranked_suggestions = sorted(final_candidate_to_prob.keys(), key=lambda k: final_candidate_to_prob.get(k, 0), reverse=True)
+        ranked_suggestions = sorted(word_to_joint_prob.keys(), key=lambda k: word_to_joint_prob.get(k, 0), reverse=True)
 
         if self.need_to_capitalize(prompt):
-            ranked_suggestions = self.capitalize(ranked_suggestions)
-
-        print('Key trace: \n ', key_trace, '\n ranked suggestions: ', ranked_suggestions)
+            ranked_suggestions = [word.capitalize() for word in ranked_suggestions]
 
         return ranked_suggestions
 
@@ -90,9 +89,6 @@ class PredictiveText:
     def need_to_capitalize(prompt):
         return (not prompt) or (list(prompt)[-1] in ['.', '?', '!'])
 
-    @staticmethod
-    def capitalize(words):
-        return [word.capitalize() for word in words]
 
 
 

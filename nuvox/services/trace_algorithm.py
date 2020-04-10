@@ -8,7 +8,7 @@ from nuvox.utils.io import pickle_load
 
 class TraceAlgorithm:
 
-    def __init__(self, vocab_path):
+    def __init__(self, vocab_path, max_count):
         """
         The trace algorithm is responsible for identifying a set of potential intended words given the sequence of
         key ids that were in focus at each interval during the swype
@@ -17,12 +17,14 @@ class TraceAlgorithm:
         vocab_path: str
             path to a pkl file containing a dict mapping from discrete representation e.g. '3246' to the set of
             possible words for that discrete repr
-        min_req: int
-            The minimum number of occurrences of a given key to include it in the discrete representation
+        max_count: int
+            maximum number of times a single key can be in focus in a row
+            equal to int(config.REQ_DWELL_TIME / config.GAZE_INTERVAL)
         """
 
         self.vocab_path = vocab_path
         self.discrete_repr_to_words = pickle_load(vocab_path)
+        self.max_count = max_count
 
     def get_possible_word_to_trace_prob(self, key_id_sequence):
         """
@@ -44,10 +46,9 @@ class TraceAlgorithm:
 
         if intermediate_keys:
             grouped_intermediate_keys, counts = self.get_grouped_intermediate_keys_with_counts(intermediate_keys)
-            intermediate_key_probs = self.get_scaled_probs_for_counts(counts)
 
             # get dict mapping all possible sub-seq of intermediate keys to it's probability
-            discrete_repr_to_prob = self.get_discrete_repr_to_prob(start_key, end_key, grouped_intermediate_keys, intermediate_key_probs)
+            discrete_repr_to_prob = self.get_discrete_repr_to_prob(start_key, end_key, grouped_intermediate_keys, counts)
         else:
             if start_key == end_key:
                 discrete_repr = start_key
@@ -60,6 +61,9 @@ class TraceAlgorithm:
         for discrete_repr, prob in discrete_repr_to_prob.items():
             words = self.discrete_repr_to_words.get(discrete_repr, [])
             possible_word_to_prob.update({word: prob for word in words})
+
+        # Normalize so probs sum to 1
+        possible_word_to_prob = self.normalize_word_to_prob(possible_word_to_prob)
 
         # Order so that most likely appear first
         possible_word_to_prob = OrderedDict({w: p for w, p in sorted(possible_word_to_prob.items(), key=lambda item: item[1], reverse=True)})
@@ -120,28 +124,54 @@ class TraceAlgorithm:
 
         return grouped_keys, counts
 
-    @staticmethod
-    def get_discrete_repr_to_prob(start_key, end_key, intermediate_keys, intermediate_key_probs):
-        """ Returns dict mapping a possible discrete repr to it's prob"""
+    def get_discrete_repr_to_prob(self, start_key, end_key, grouped_intermediate_keys, intermediate_key_counts):
+
         discrete_repr_to_prob = {}
-        for sub_list_len in range(len(intermediate_keys) + 1):
-            for index_sub_list in itertools.combinations(list(range(len(intermediate_keys))), sub_list_len):
-                sub_list = [intermediate_keys[idx] for idx in index_sub_list]
-                discrete_repr = ''.join([start_key, ''.join(sub_list), end_key])
-                joint_prob = 1  # calculate joint of this sub list
-                for i in range(len(intermediate_keys)):
-                    if i in index_sub_list:
-                        joint_prob *= intermediate_key_probs[i]
-                    else:
-                        joint_prob *= (1 - intermediate_key_probs[i])
-                discrete_repr_to_prob.update({discrete_repr: joint_prob})
+        all_sub_lists = list(itertools.product([True, False], repeat=len(grouped_intermediate_keys)))
+        for sub_list_bools in all_sub_lists:
+            joint_prob = 1
+            discrete_repr = str(start_key)
+            for is_key_included, key_id, key_count in zip(sub_list_bools, grouped_intermediate_keys, intermediate_key_counts):
+                key_prob = 1 / (1 + np.exp(-10*((key_count / self.max_count) - 0.5)))
+                if is_key_included:
+                    discrete_repr += str(key_id)
+                    joint_prob *= key_prob
+                else:
+                    joint_prob *= (1-key_prob)
+
+            discrete_repr += str(end_key)
+            discrete_repr_to_prob[discrete_repr] = joint_prob
 
         return discrete_repr_to_prob
 
     @staticmethod
-    def get_scaled_probs_for_counts(counts):
-        # FIXME can't hardcode this
-        return 3/4 * (np.array(counts) / max(counts))
+    def normalize_word_to_prob(word_to_prob):
+        """
+        Normalize initial word_to_prob so that the sum of all word probs is 1
+        Parameters
+        ----------
+        word_to_prob: dict
+
+        Returns
+        -------
+        normalized_word_to_prob: dict
+        """
+        _sum = sum([prob for prob in word_to_prob.values()])
+        return {word: prob/_sum for word, prob in word_to_prob.items()}
+
+
+if __name__ == '__main__':
+    """ Testing """
+    import os
+    from definition import ROOT_DIR
+    vocab = os.path.join(ROOT_DIR, 'nuvox', 'config', 'top_25k_vocab.pkl')
+    algo = TraceAlgorithm(vocab_path=vocab, max_count=10)
+    word_to_prob = algo.get_possible_word_to_trace_prob(key_id_sequence=[3, 2, 2, 2, 2, 2, 2, 1, 1, 4, 4, 4, 4, 4, 4, 4, 5,  6, 6])
+    print('stop here')
+
+
+
+
 
 
 
