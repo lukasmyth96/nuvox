@@ -8,21 +8,18 @@ from nuvox.analytics.swype import Swype
 
 class Session:
 
-    def __init__(self, config, output_dir):
+    def __init__(self, config):
         """
         Session stores the analytics data from a single user session.
         Parameters
         ----------
         config: nuvox.config.config.Config
-        output_dir: str
-            if save() method is called then the session will be saved as a pickle within this directory with it's
-            start time as the default filename.
         """
 
         self.swypes = []
 
         # Store information about state at runtime
-        self.output_dir = output_dir
+        self.output_dir = config.ANALYTICS_OUTPUT_DIR
         self.config = config
         self.start_time = datetime.now().strftime("%Y_%m_%d_T%H_%M_%S")
         self.commit = subprocess.check_output(["git", "describe", "--always"]).strip().decode('utf-8')

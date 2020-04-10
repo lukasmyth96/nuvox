@@ -19,14 +19,14 @@ class PredictiveText:
         self.language_model = GPT2()
         self.trace_algorithm = TraceAlgorithm(vocab_path=config.VOCAB_PATH)
 
-    def predict_next_word(self, prompt, key_id_sequence):
+    def predict_next_word(self, prompt, key_trace):
         """
 
         Parameters
         ----------
         prompt: str
             previous text
-        key_id_sequence: list[str]
+        key_trace: list[str]
             sequence of key_ids that were in focus at each interval during a swype
 
         Returns
@@ -34,18 +34,18 @@ class PredictiveText:
         ranked_suggestions: list[str]
             ranked list of other suggested words
         """
-        key_id_sequence = self.remove_blacklisted_keys(key_id_sequence)
+        key_trace = self.remove_blacklisted_keys(key_trace)
 
-        if not key_id_sequence:
+        if not key_trace:
             return []
 
         # Phase 0 - check if punctuation key was selected
-        intended_punctuation = self.get_intended_punctuation(key_id_sequence)
+        intended_punctuation = self.get_intended_punctuation(key_trace)
         if intended_punctuation:
             return [intended_punctuation]
 
         # Phase 1) Get a dict mapping all possibly intended words to their probability based on the trace ONLY
-        possible_word_to_prob = self.trace_algorithm.get_possible_word_to_trace_prob(key_id_sequence=key_id_sequence)
+        possible_word_to_prob = self.trace_algorithm.get_possible_word_to_trace_prob(key_id_sequence=key_trace)
 
         # Phase 2) Calculate a scaled likelihood by multiplying each words trace probability by log10(frequency(word))
         # this is used to narrow the list of candidates down to a suitable number for the language model
@@ -61,7 +61,7 @@ class PredictiveText:
         if self.need_to_capitalize(prompt):
             ranked_suggestions = self.capitalize(ranked_suggestions)
 
-        print('Key trace: \n ', key_id_sequence, '\n ranked suggestions: ', ranked_suggestions)
+        print('Key trace: \n ', key_trace, '\n ranked suggestions: ', ranked_suggestions)
 
         return ranked_suggestions
 

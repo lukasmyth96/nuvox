@@ -15,7 +15,6 @@ class Config:
     # display settings
     DISPLAY_HEIGHT = 600
     DISPLAY_WIDTH = 750
-
     DISPLAY_BG_COLOUR = 'steel blue'
     RESIZABLE = False
     FORCE_ON_TOP = True
@@ -49,6 +48,9 @@ class Config:
     DEFAULT_BG = (32, 32, 32)  # default colour of key
     HIGHLIGHT_BG = (64, 0, 0)  # colour when key is fully selected
     START_KEY_COLOUR = (0, 100, 0)  # colour start key flashes to indicate start of a swype
+
+    # Analytics settings
+    ANALYTICS_OUTPUT_DIR = os.path.join(ROOT_DIR, 'analytics_data')
 
 
 

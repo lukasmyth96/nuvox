@@ -6,6 +6,8 @@ from nuvox.views.main_view import View
 from nuvox.services.predictive_text import PredictiveText
 from nuvox.services.text_to_speech import TextToSpeech
 from nuvox.services.eye_gaze_server import EyeGazeServer, NoGazeDataReturned
+from nuvox.analytics.session import Session
+from nuvox.analytics.swype import Swype
 
 
 class Controller:
@@ -33,6 +35,7 @@ class Controller:
         self.text_to_speech = TextToSpeech()
         self.eye_gaze_server = EyeGazeServer(host=config.GAZE_SERVER_HOST,
                                              exe_path=config.EXE_PATH)
+        self.session = Session(config=config)  # analytics session
 
         # Swype
         self.swype_in_progress = False
@@ -123,13 +126,13 @@ class Controller:
 
     def on_swype_end(self, key_in_focus):
         self.swype_in_progress = False
-        ranked_predictions = self.predictive_text.predict_next_word(prompt=self.current_text,
-                                                                    key_id_sequence=self.key_trace)
-        if ranked_predictions:
-            self.update_display_text(' '.join([self.current_text, ranked_predictions[0]]))
-            suggestions = ranked_predictions[1:]
-            self.update_suggestions(suggestions=suggestions, suggestion_indices=list(range(min(3, len(suggestions)))))
-            self.view.flash_pred_word(key_id=key_in_focus.key_id, word=ranked_predictions[0])
+        ranked_suggestions = self.predictive_text.predict_next_word(prompt=self.current_text, key_trace=self.key_trace)
+        if ranked_suggestions:
+            self.session.append(swype=Swype(self.key_trace, ranked_suggestions, accepted_word=ranked_suggestions[0]))
+            self.update_display_text(' '.join([self.current_text, ranked_suggestions[0]]))
+            self.update_suggestions(suggestions=ranked_suggestions[1:],
+                                    suggestion_indices=list(range(min(3, len(ranked_suggestions[1:])))))
+            self.view.flash_pred_word(key_id=key_in_focus.key_id, word=ranked_suggestions[0])
         self.view.reset_widget_colour(key_id=key_in_focus.key_id)
         self.key_trace.clear()
 
@@ -143,6 +146,7 @@ class Controller:
     def on_exit_key(self):
         answered_yes = self.view.open_yes_no_popup(message='Are you sure you want to exit?')
         if answered_yes:
+            self.session.save()  # save analytics data
             self.view.toplevel.destroy()
             try:
                 self.eye_gaze_server.process.kill()
@@ -168,6 +172,7 @@ class Controller:
         current_words = self.current_text.split(' ')
         widget = self.view.key_id_to_widget['suggestion_{}'.format(suggestion_num)]
         suggestion = widget.cget('text')
+        self.session.swypes[-1].accepted_word = suggestion  # update accepted word in analytics session
         new_words = current_words[:-1] + [suggestion]
         self.update_display_text(text=' '.join(new_words))
 
