@@ -41,6 +41,8 @@ class Swype:
 
     @accepted_word.setter
     def accepted_word(self, word):
+        if self.ranked_suggestions is None:
+            raise BaseException('cannot set accepted word while ranked_suggestions attribute is None')
         if word not in self.ranked_suggestions:
             raise ValueError('word \'{}\' is not in ranked suggestions for swype'.format(word))
         self._accepted_word = word

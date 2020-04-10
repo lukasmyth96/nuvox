@@ -131,6 +131,7 @@ class Controller:
         ranked_suggestions = self.predictive_text.predict_next_word(prompt=self.current_text, swype=swype)
         if ranked_suggestions:
             swype.ranked_suggestions = ranked_suggestions
+            swype.accepted_word = ranked_suggestions[0]
             self.session.append(swype)
             self.update_display_text(' '.join([self.current_text, ranked_suggestions[0]]))
             self.update_suggestions(suggestions=ranked_suggestions[1:],

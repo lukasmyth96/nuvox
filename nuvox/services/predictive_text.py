@@ -55,7 +55,10 @@ class PredictiveText:
         swype.word_to_trace_prob = word_to_trace_prob  # store in swype obj for analytics
         candidate_words = list(word_to_trace_prob)
 
-        # Phase 2) Get dict mapping word --> prob(word | prompt) all possibly intended words using language model
+        # Phase 2) Filter the list of candidates based on their frequency in the english language
+        candidate_words = list(sorted(candidate_words, key=lambda word: zipf_frequency(word, 'en'), reverse=True))[:self.config.MAX_SUGGESTIONS]
+
+        # Phase 3) Get dict mapping word --> prob(word | prompt) all possibly intended words using language model
         word_to_language_prob = self.language_model.get_candidate_word_probs(prompt,
                                                                              candidate_words=candidate_words,
                                                                              normalize=True)
@@ -63,7 +66,9 @@ class PredictiveText:
 
         # Phase 3) Get dict mapping word --> prob(word | trace) * prob(word | prompt) (i.e. the joint probability)
         # TODO - need some sort of scaling factor to control influence of each model
-        word_to_joint_prob = {word: (word_to_trace_prob[word] * word_to_language_prob[word]) for word in candidate_words}
+        w = 0.5  # relative weight on the trace probability vs language model prob
+        word_to_joint_prob = {word: ((w * word_to_trace_prob[word]) + ((1-w) * word_to_language_prob[word]))
+                              for word in candidate_words}
         swype.word_to_joint_prob = word_to_joint_prob  # store in swype obj for analytics
 
         ranked_suggestions = sorted(word_to_joint_prob.keys(), key=lambda k: word_to_joint_prob.get(k, 0), reverse=True)
