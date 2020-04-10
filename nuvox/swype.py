@@ -25,7 +25,8 @@ class Swype:
         self.key_trace = key_trace
         self.ranked_suggestions = ranked_suggestions
         self._accepted_word = None
-        self.accepted_word = accepted_word  # call setter
+        if accepted_word:
+            self.accepted_word = accepted_word  # call setter
         self.word_to_trace_prob = word_to_trace_prob
         self.word_to_language_prob = word_to_language_prob
         self.word_to_joint_prob = word_to_joint_prob

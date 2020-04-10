@@ -130,7 +130,8 @@ class Controller:
         self.swype_in_progress = False
         ranked_suggestions = self.predictive_text.predict_next_word(prompt=self.current_text, swype=swype)
         if ranked_suggestions:
-            self.session.append(swype=Swype(current_key_trace, ranked_suggestions, accepted_word=ranked_suggestions[0]))
+            swype.ranked_suggestions = ranked_suggestions
+            self.session.append(swype)
             self.update_display_text(' '.join([self.current_text, ranked_suggestions[0]]))
             self.update_suggestions(suggestions=ranked_suggestions[1:],
                                     suggestion_indices=list(range(min(3, len(ranked_suggestions[1:])))))

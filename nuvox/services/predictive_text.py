@@ -19,7 +19,9 @@ class PredictiveText:
 
         self.config = config
         self.language_model = GPT2()
-        self.trace_algorithm = TraceAlgorithm(vocab_path=config.VOCAB_PATH)
+
+        max_count = int(config.REQ_DWELL_TIME / config.GAZE_INTERVAL)
+        self.trace_algorithm = TraceAlgorithm(vocab_path=config.VOCAB_PATH, max_count=max_count)
 
     def predict_next_word(self, prompt, swype):
         """
