@@ -4,6 +4,7 @@ import itertools
 import numpy as np
 
 from nuvox.utils.io import pickle_load
+from nuvox.utils.common import normalize_word_to_prob_dict
 
 
 class TraceAlgorithm:
@@ -63,7 +64,7 @@ class TraceAlgorithm:
             possible_word_to_prob.update({word: prob for word in words})
 
         # Normalize so probs sum to 1
-        possible_word_to_prob = self.normalize_word_to_prob(possible_word_to_prob)
+        possible_word_to_prob = normalize_word_to_prob_dict(possible_word_to_prob)
 
         # Order so that most likely appear first
         possible_word_to_prob = OrderedDict({w: p for w, p in sorted(possible_word_to_prob.items(), key=lambda item: item[1], reverse=True)})
@@ -144,20 +145,6 @@ class TraceAlgorithm:
 
         return discrete_repr_to_prob
 
-    @staticmethod
-    def normalize_word_to_prob(word_to_prob):
-        """
-        Normalize initial word_to_prob so that the sum of all word probs is 1
-        Parameters
-        ----------
-        word_to_prob: dict
-
-        Returns
-        -------
-        normalized_word_to_prob: dict
-        """
-        _sum = sum([prob for prob in word_to_prob.values()])
-        return {word: prob/_sum for word, prob in word_to_prob.items()}
 
 
 if __name__ == '__main__':

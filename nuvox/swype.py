@@ -2,21 +2,33 @@
 
 class Swype:
 
-    def __init__(self, key_trace, ranked_suggestions, accepted_word=None):
+    def __init__(self, key_trace,
+                 ranked_suggestions=None,
+                 accepted_word=None,
+                 word_to_trace_prob=None,
+                 word_to_language_prob=None,
+                 word_to_joint_prob=None):
         """
         Single swype
         Parameters
         ----------
         key_trace: list[str]
             list of key_ids that were recorded at every timesteps during the swype
-        ranked_suggestions: list[str]
+        ranked_suggestions: list[str], optional
             list of ranked suggestions that was predicted for the swype
+        accepted_word: str, optional
+        word_to_trace_prob: dict, optional
+        word_to_language_prob: dict, optional
+        word_to_joint_prob: dict, optional
         """
 
         self.key_trace = key_trace
         self.ranked_suggestions = ranked_suggestions
         self._accepted_word = None
         self.accepted_word = accepted_word  # call setter
+        self.word_to_trace_prob = word_to_trace_prob
+        self.word_to_language_prob = word_to_language_prob
+        self.word_to_joint_prob = word_to_joint_prob
         self.was_deleted = False
 
     def __repr__(self):

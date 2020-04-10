@@ -1,3 +1,5 @@
+import copy
+
 from wordfreq import zipf_frequency
 
 from nuvox.services.gpt2 import GPT2
@@ -19,22 +21,24 @@ class PredictiveText:
         self.language_model = GPT2()
         self.trace_algorithm = TraceAlgorithm(vocab_path=config.VOCAB_PATH)
 
-    def predict_next_word(self, prompt, key_trace):
+    def predict_next_word(self, prompt, swype):
         """
 
         Parameters
         ----------
         prompt: str
             previous text
-        key_trace: list[str]
-            sequence of key_ids that were in focus at each interval during a swype
+        swype: nuvox.swype.Swype
+            swype object - containing key_trace needed for prediction.
+            passing in entire object so that attributes can be updated for analytics.
 
         Returns
         -------
         ranked_suggestions: list[str]
             ranked list of other suggested words
         """
-        key_trace = self.remove_blacklisted_keys(key_trace)
+        swype.key_trace = self.remove_blacklisted_keys(swype.key_trace)
+        key_trace = copy.copy(swype.key_trace)
 
         if not key_trace:
             return []
@@ -46,16 +50,19 @@ class PredictiveText:
 
         # Phase 1) Get dict mapping word --> prob(word | trace) for all possibly intended words using trace algorithm
         word_to_trace_prob = self.trace_algorithm.get_possible_word_to_trace_prob(key_id_sequence=key_trace)
+        swype.word_to_trace_prob = word_to_trace_prob  # store in swype obj for analytics
         candidate_words = list(word_to_trace_prob)
 
         # Phase 2) Get dict mapping word --> prob(word | prompt) all possibly intended words using language model
-        word_to_language_prob = self.language_model.predict_next_word_prob(prompt, candidate_words=candidate_words)
-        _sum = sum([prob for prob in word_to_language_prob])  # normalize so probs sum to 1
-        word_to_language_prob = {word: prob/_sum for word, prob in word_to_language_prob.items()}
+        word_to_language_prob = self.language_model.get_candidate_word_probs(prompt,
+                                                                             candidate_words=candidate_words,
+                                                                             normalize=True)
+        swype.word_to_language_prob = word_to_language_prob  # store in swype obj for analytics
 
         # Phase 3) Get dict mapping word --> prob(word | trace) * prob(word | prompt) (i.e. the joint probability)
         # TODO - need some sort of scaling factor to control influence of each model
         word_to_joint_prob = {word: (word_to_trace_prob[word] * word_to_language_prob[word]) for word in candidate_words}
+        swype.word_to_joint_prob = word_to_joint_prob  # store in swype obj for analytics
 
         ranked_suggestions = sorted(word_to_joint_prob.keys(), key=lambda k: word_to_joint_prob.get(k, 0), reverse=True)
 
