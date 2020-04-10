@@ -48,6 +48,7 @@ class PredictiveText:
         # Phase 0 - check if punctuation key was selected
         intended_punctuation = self.get_intended_punctuation(key_trace)
         if intended_punctuation:
+            swype.word_to_trace_prob = swype.word_to_language_prob = swype.word_to_joint_prob = {intended_punctuation: 1.0}
             return [intended_punctuation]
 
         # Phase 1) Get dict mapping word --> prob(word | trace) for all possibly intended words using trace algorithm
@@ -66,7 +67,7 @@ class PredictiveText:
 
         # Phase 3) Get dict mapping word --> prob(word | trace) * prob(word | prompt) (i.e. the joint probability)
         # TODO - need some sort of scaling factor to control influence of each model
-        w = 0.5  # relative weight on the trace probability vs language model prob
+        w = 0.75  # relative weight on the trace probability vs language model prob
         word_to_joint_prob = {word: ((w * word_to_trace_prob[word]) + ((1-w) * word_to_language_prob[word]))
                               for word in candidate_words}
         swype.word_to_joint_prob = word_to_joint_prob  # store in swype obj for analytics

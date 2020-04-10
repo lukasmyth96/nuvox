@@ -20,11 +20,12 @@ def plot_swype_probabilities(swype, top_n=10):
     joint_probs = [swype.word_to_joint_prob[w] for w in words] if swype.word_to_joint_prob else None
 
     # create plot
-    index = np.arange(top_n)
+    index = np.arange(min(len(words), top_n))
     bar_width = 0.25
     opacity = 0.9
 
     if trace_probs:
+
         bar1 = plt.bar(index, trace_probs, bar_width,
                        alpha=opacity,
                        color='b',
@@ -44,6 +45,7 @@ def plot_swype_probabilities(swype, top_n=10):
 
     plt.xlabel('Word')
     plt.ylabel('Prob')
+    plt.ylim(0, 1)
     plt.title('Swype probability diagnostic')
     plt.xticks(index + bar_width, words, rotation=45)
     plt.legend()

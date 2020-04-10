@@ -8,7 +8,7 @@ from nuvox.services.text_to_speech import TextToSpeech
 from nuvox.services.eye_gaze_server import EyeGazeServer, NoGazeDataReturned
 from nuvox.analytics.session import Session
 from nuvox.swype import Swype
-
+from nuvox.analytics.diagnostic_functions import plot_swype_probabilities
 
 class Controller:
 
@@ -132,6 +132,10 @@ class Controller:
         if ranked_suggestions:
             swype.ranked_suggestions = ranked_suggestions
             swype.accepted_word = ranked_suggestions[0]
+
+            # FIXME delete after debugging
+            plot_swype_probabilities(swype, top_n=self.config.MAX_SUGGESTIONS)
+
             self.session.append(swype)
             self.update_display_text(' '.join([self.current_text, ranked_suggestions[0]]))
             self.update_suggestions(suggestions=ranked_suggestions[1:],
