@@ -20,8 +20,8 @@ class Config:
     FORCE_ON_TOP = True
 
     # swype settings
-    REQ_DWELL_TIME = 1  # seconds required to start/stop a swype
-    GAZE_INTERVAL = 0.1  # seconds between consecutive sampling of the gaze position
+    REQ_DWELL_TIME = 0.75  # seconds required to start/stop a swype
+    GAZE_INTERVAL = 0.05  # seconds between consecutive sampling of the gaze position
 
     # control settings
     CONTROL_WITH_EYES = True
@@ -31,7 +31,7 @@ class Config:
     # predictive text
     VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'config', 'top_25k_vocab.pkl')
     MAX_SUGGESTIONS = 20  # maximum words passed to the language model for consideration
-    PRED_FLASH_DURATION = 0.5  # num secs that predicted word is flashed on key
+    PRED_FLASH_DURATION = 0.3  # num secs that predicted word is flashed on key
     KEYS_TO_IGNORE = ['5', ',', '.', '?', 'display', 'suggestion_1', 'suggestion_2', 'suggestion_3',
                       'speak', 'delete', 'clear', 'exit']
 

@@ -24,5 +24,7 @@ def get_discrete_representation_for_word(keyboard, word):
         if (not discrete_repr) or (discrete_repr and key.key_id != discrete_repr[-1]):
             discrete_repr.append(key.key_id)
 
+    discrete_repr = ''.join(discrete_repr)
+
     return discrete_repr
 
