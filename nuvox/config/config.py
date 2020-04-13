@@ -29,8 +29,8 @@ class Config:
     INTERVALS_BEFORE_SWITCH_TO_MOUSE = TIME_BEFORE_SWITCH_TO_MOUSE / GAZE_INTERVAL
 
     # predictive text
-    VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'config', 'top_25k_vocab.pkl')
-    MAX_SUGGESTIONS = 20  # maximum words passed to the language model for consideration
+    VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'vocab', 'clean_vocab_discrete_repr_to_word.pkl')
+    MAX_SUGGESTIONS = 15  # maximum words passed to the language model for consideration
     PRED_FLASH_DURATION = 0.3  # num secs that predicted word is flashed on key
     KEYS_TO_IGNORE = ['5', ',', '.', '?', 'display', 'suggestion_1', 'suggestion_2', 'suggestion_3',
                       'speak', 'delete', 'clear', 'exit']
