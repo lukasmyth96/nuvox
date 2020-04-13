@@ -134,7 +134,7 @@ class Controller:
             swype.accepted_word = ranked_suggestions[0]
 
             # FIXME delete after debugging
-            plot_swype_probabilities(swype, top_n=self.config.MAX_SUGGESTIONS)
+            #plot_swype_probabilities(swype, top_n=self.config.MAX_SUGGESTIONS)
 
             self.session.append(swype)
             self.update_display_text(' '.join([self.current_text, ranked_suggestions[0]]))
