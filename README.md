@@ -37,8 +37,8 @@ The majority of the code is written in Python. Tkinter is used to build the GUI.
 
 In order to figure out which word the user actually inteded to write we first use what's refered to as the **trace algorithm** to assign a probability to each word in the vocabulary conditioned solely on the sequence of keys that were in focus during the swype. Probabilities are assigned here based on the relative duration that each key was in focus for. For each word assigned a non-zero probability by the trace algorithm, we use a pre-trained language model called [GPT-2*](https://openai.com/blog/better-language-models/) to predict the probablility that each word was intended based on the preceeding text. The final probability assigned to each word is then calculated as a weighted average of the probability assigned by the trace algorithm and the language model. 
 
-* For our language model we use a distilled version of the original GPT-2 model that's available via the 'transformers' python package
-written by [Hugging Face](https://huggingface.co/). This model achieves near identical performance to the original GPT-2 model but with less parameters making it faster. You can play around with the powers of the model [here](https://transformer.huggingface.co/model/distil-gpt2).
+\* We use a distilled version of the original GPT-2 model that's available via the 'transformers' python package
+written by [Hugging Face](https://huggingface.co/). This model achieves near identical performance to the original GPT-2 model but with less parameters meaning it's faster! You can play around with the powers of the model [here](https://transformer.huggingface.co/model/distil-gpt2).
 
 
 ## Can I try it out?
