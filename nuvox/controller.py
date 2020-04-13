@@ -7,8 +7,8 @@ from nuvox.services.predictive_text import PredictiveText
 from nuvox.services.text_to_speech import TextToSpeech
 from nuvox.services.eye_gaze_server import EyeGazeServer, NoGazeDataReturned
 from nuvox.analytics.session import Session
-from nuvox.analytics.swype import Swype
-
+from nuvox.swype import Swype
+from nuvox.analytics.diagnostic_functions import plot_swype_probabilities
 
 class Controller:
 
@@ -126,10 +126,17 @@ class Controller:
 
     def on_swype_end(self, key_in_focus):
         current_key_trace = copy.copy(self.key_trace)  # as it will change whilst processing
+        swype = Swype(key_trace=current_key_trace)
         self.swype_in_progress = False
-        ranked_suggestions = self.predictive_text.predict_next_word(prompt=self.current_text, key_trace=current_key_trace)
+        ranked_suggestions = self.predictive_text.predict_next_word(prompt=self.current_text, swype=swype)
         if ranked_suggestions:
-            self.session.append(swype=Swype(current_key_trace, ranked_suggestions, accepted_word=ranked_suggestions[0]))
+            swype.ranked_suggestions = ranked_suggestions
+            swype.accepted_word = ranked_suggestions[0]
+
+            # FIXME delete after debugging
+            plot_swype_probabilities(swype, top_n=self.config.MAX_SUGGESTIONS)
+
+            self.session.append(swype)
             self.update_display_text(' '.join([self.current_text, ranked_suggestions[0]]))
             self.update_suggestions(suggestions=ranked_suggestions[1:],
                                     suggestion_indices=list(range(min(3, len(ranked_suggestions[1:])))))

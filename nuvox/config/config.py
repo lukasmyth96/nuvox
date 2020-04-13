@@ -20,8 +20,8 @@ class Config:
     FORCE_ON_TOP = True
 
     # swype settings
-    REQ_DWELL_TIME = 1  # seconds required to start/stop a swype
-    GAZE_INTERVAL = 0.1  # seconds between consecutive sampling of the gaze position
+    REQ_DWELL_TIME = 0.75  # seconds required to start/stop a swype
+    GAZE_INTERVAL = 0.05  # seconds between consecutive sampling of the gaze position
 
     # control settings
     CONTROL_WITH_EYES = True
@@ -29,9 +29,9 @@ class Config:
     INTERVALS_BEFORE_SWITCH_TO_MOUSE = TIME_BEFORE_SWITCH_TO_MOUSE / GAZE_INTERVAL
 
     # predictive text
-    VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'config', 'top_25k_vocab.pkl')
-    MAX_POTENTIAL_WORDS = 20  # maximum words passed to the language model for consideration
-    PRED_FLASH_DURATION = 0.5  # num secs that predicted word is flashed on key
+    VOCAB_PATH = os.path.join(ROOT_DIR, 'nuvox', 'vocab', 'clean_vocab_discrete_repr_to_word.pkl')
+    MAX_SUGGESTIONS = 15  # maximum words passed to the language model for consideration
+    PRED_FLASH_DURATION = 0.3  # num secs that predicted word is flashed on key
     KEYS_TO_IGNORE = ['5', ',', '.', '?', 'display', 'suggestion_1', 'suggestion_2', 'suggestion_3',
                       'speak', 'delete', 'clear', 'exit']
 

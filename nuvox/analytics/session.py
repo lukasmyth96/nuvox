@@ -3,7 +3,7 @@ import os
 import subprocess
 
 from nuvox.utils.io import pickle_save
-from nuvox.analytics.swype import Swype
+from nuvox.swype import Swype
 
 
 class Session:

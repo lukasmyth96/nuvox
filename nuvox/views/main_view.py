@@ -75,7 +75,7 @@ class View:
         self.toplevel.title('nuvox keyboard')
         # center window within screen
         offset_x = int(self.toplevel.winfo_screenwidth()/2 - self.config.DISPLAY_WIDTH/2)
-        offset_y = int(self.toplevel.winfo_screenheight()/2 - self.config.DISPLAY_HEIGHT/2)
+        offset_y = int(self.toplevel.winfo_screenheight()/2 - self.config.DISPLAY_HEIGHT/2) - 50
         self.toplevel.geometry("{}x{}+{}+{}".format(self.config.DISPLAY_WIDTH,
                                                     self.config.DISPLAY_HEIGHT,
                                                     offset_x,

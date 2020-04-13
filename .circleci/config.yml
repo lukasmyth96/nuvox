@@ -4,7 +4,7 @@ jobs:
     branches:
       only:
         - master
-        - implement_basic_analytics
+        - new_predictive_text_algorithm
     docker:
       - image: circleci/python:3.7
     steps:
