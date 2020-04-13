@@ -1,5 +1,10 @@
 # nuvox
 
+<p align="center">
+  <img src="readme.gif">
+</p>
+
+
 ### What is nuvox?
 nuvox is an intelligent, on-screen keyboard that can be controlled with your eyes using commercial eye-tracking hardware.
 
@@ -19,9 +24,6 @@ Whilst there are some excellent eye-tracking keyboards already out there, the ma
 - nuvox embraces a minimalist design. Typing with your eyes can be tricky at the best of times - do you really need all those advanced buttons and settings taking up space? Keep it simple.
 
 
-<p align="center">
-  <img src="readme.gif">
-</p>
 
 
 
